@@ -152,6 +152,12 @@ app_license = "mit"
 # 	}
 # }
 
+doc_events = {
+	"Employee": {
+		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
+	},
+}
+
 # Scheduled Tasks
 # ---------------
 
@@ -261,4 +267,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

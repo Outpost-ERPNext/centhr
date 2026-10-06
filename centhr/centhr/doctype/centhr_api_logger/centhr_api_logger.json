@@ -10,12 +10,23 @@
   "status",
   "name1",
   "company",
+  "reference_name",
+  "target_reference",
+  "request_section",
+  "request_method",
+  "column_break_request",
+  "http_status",
+  "endpoint",
+  "request_payload",
+  "response_section",
+  "error",
   "api_response"
  ],
  "fields": [
   {
    "fieldname": "doctypes",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Doctype",
    "options": "\nEmployee\nLeave Application\nLeave Allocation\nAttendance\nShift\nShift Type\nEmployee Checkin",
@@ -24,6 +35,7 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "options": "\nPending\nFailed\nSuccess"
@@ -31,6 +43,7 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Company",
    "options": "Company"
@@ -44,12 +57,72 @@
    "fieldname": "name1",
    "fieldtype": "Data",
    "label": "Name"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_reference",
+   "fieldtype": "Data",
+   "label": "Target Reference",
+   "read_only": 1
+  },
+  {
+   "fieldname": "request_section",
+   "fieldtype": "Section Break",
+   "label": "Request"
+  },
+  {
+   "fieldname": "request_method",
+   "fieldtype": "Select",
+   "label": "Request Method",
+   "options": "\nGET\nPOST",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_request",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "http_status",
+   "fieldtype": "Int",
+   "label": "HTTP Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Small Text",
+   "label": "Endpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "request_payload",
+   "fieldtype": "Code",
+   "label": "Request Payload",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "response_section",
+   "fieldtype": "Section Break",
+   "label": "Response"
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Long Text",
+   "label": "Error",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-06 19:27:54.486178",
+ "modified": "2026-10-06 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "CentHR API Logger",
