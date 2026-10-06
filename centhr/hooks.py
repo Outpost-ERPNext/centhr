@@ -156,6 +156,12 @@ doc_events = {
 	"Employee": {
 		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
 	},
+	"Leave Application": {
+		"on_submit": "centhr.api.post.leave_application.enqueue_leave_application_sync",
+	},
+	"Attendance": {
+		"on_submit": "centhr.api.post.attendance.enqueue_attendance_sync",
+	},
 }
 
 # Scheduled Tasks
