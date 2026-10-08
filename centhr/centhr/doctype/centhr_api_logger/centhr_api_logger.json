@@ -20,7 +20,15 @@
   "request_payload",
   "response_section",
   "error",
-  "api_response"
+  "error_details",
+  "api_response",
+  "resync_section",
+  "resynced",
+  "resync_count",
+  "resynced_from",
+  "column_break_resync",
+  "sync_method",
+  "sync_kwargs"
  ],
  "fields": [
   {
@@ -117,12 +125,63 @@
    "fieldtype": "Long Text",
    "label": "Error",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "resync_section",
+   "fieldtype": "Section Break",
+   "label": "Resync"
+  },
+  {
+   "default": "0",
+   "fieldname": "resynced",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Resynced",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "resync_count",
+   "fieldtype": "Int",
+   "label": "Resync Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resynced_from",
+   "fieldtype": "Link",
+   "label": "Resynced From",
+   "options": "CentHR API Logger",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_resync",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sync_method",
+   "fieldtype": "Data",
+   "label": "Sync Method",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_kwargs",
+   "fieldtype": "Code",
+   "label": "Sync Arguments",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_details",
+   "fieldtype": "Long Text",
+   "label": "Technical Details",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-06 20:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "CentHR API Logger",

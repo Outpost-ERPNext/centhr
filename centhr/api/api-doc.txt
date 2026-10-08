@@ -1,0 +1,127 @@
+CENTHR API - DOCUMENTATION
+==========================
+
+One-way sync of HR records from this site to remote Frappe/HRMS sites
+("targets") through the target's REST API (/api/resource/<DocType>).
+Flow: doc event (hooks.py) -> enqueue_* -> background job -> HTTP request
+-> one CentHR API Logger record per request.
+
+
+1. HOOKS (centhr/hooks.py)
+--------------------------
+  Employee           after_insert -> post   | on_update -> update | on_trash -> delete
+  Leave Application  on_submit    -> post   | on_cancel -> cancel | on_trash -> delete
+  Attendance         on_submit    -> post   | on_cancel -> cancel | on_trash -> delete
+
+  update/attendance.py and update/leave_application.py exist but are NOT
+  in hooks.py, so they do not run.
+  after_install/after_migrate add Employee custom fields territory,
+  cost_center and channel (customization/employee.py).
+
+
+2. COMMON PATTERN (all files)
+-----------------------------
+  - Targets:  rows of CentHr Settings > authorization where company =
+              doc.company. No row = nothing is queued.
+  - Job:      queue "short", job_id "centhr_<doctype>_<action>::<name>",
+              deduplicate, enqueue_after_commit. A failure on the target
+              never blocks or rolls back the local save.
+  - Auth:     "Authorization: token <api_key>:<api_secret>".
+  - Employee: matched on the target by employee_number (or the name, if
+              it is empty). Not found = Failed log "Employee X is not
+              synced to the target system".
+  - Payload:  all value fields of the DocType meta, child tables too.
+              None becomes "".
+  - HTTP:     timeout (10, 30) s, 2 retries.
+  - Errors:   401/403 key/secret, 404 base URL, 409 already exists,
+              400/417/422 rejected, 5xx server error. HTML error pages
+              are reduced to title + traceback lines.
+  - Log:      insert_log writes every request (Success or Failed) with
+              method, endpoint, status, payload, response (10000 chars)
+              and target_reference.
+  - Failure:  CentHRSyncError or any exception is logged, the next target
+              is tried, then notify_failure alerts the users in
+              CentHr Settings > error_alerts.
+
+
+3. POST - centhr/api/post/
+--------------------------
+employee.py - sync_employee(employee)
+  Creates the Employee on the target after insert. Stops if the
+  employee_number already exists on the target. Checks the required
+  fields (department, company_email, territory, cost_center, channel). If
+  one is empty, it logs Failed and does not send. Otherwise it sends POST.
+  409 = Success. Sync the Employee first: all other files depend on it.
+
+leave_application.py - sync_leave_application(leave_application)
+  Creates a submitted Leave Application (docstatus 1) on submit. Clears
+  salary_slip and amended_from. Stops if a non-cancelled record with the
+  same employee, leave_type, from_date and to_date exists. Otherwise it
+  sends POST.
+
+attendance.py - sync_attendance(attendance)
+  Same as leave_application, for Attendance. Clears leave_application,
+  attendance_request and amended_from. The duplicate check is a
+  non-cancelled record with the same employee + attendance_date.
+
+
+4. UPDATE - centhr/api/update/
+------------------------------
+employee.py - update_employee(employee, employee_number)
+  Runs on every save except insert. Finds the target Employee by the OLD
+  employee_number (from before the save), so a renamed number still
+  matches. Sends PUT with all fields except lft, rgt and old_parent
+  (the target calculates these).
+
+leave_application.py - update_leave_application(leave_application, lookup)
+  Drafts only (docstatus 0). Finds the target draft by the OLD employee,
+  leave_type, from_date and to_date, then sends PUT. No draft = Failed
+  log. Not hooked.
+
+attendance.py - update_attendance(attendance, employee, attendance_date)
+  Drafts only. Finds the target draft by the OLD employee +
+  attendance_date, then sends PUT. No draft = Failed log. Not hooked.
+
+
+5. DELETE / CANCEL - centhr/api/delete/
+---------------------------------------
+The local doc may be gone, so the job gets a snapshot dict of the
+needed fields, not a document name.
+
+employee.py - delete_employee(employee, employee_name, employee_number, company)
+  Sends DELETE for the target Employee. Not found = Success. If the
+  delete fails with LinkExistsError, it gets the linked records
+  (linked_with.get). Employees with reports_to = this employee are
+  unlinked. All other linked records are cancelled (if submitted) and
+  deleted. Then it sends DELETE again.
+
+leave_application.py - sync_leave_application_removal(action, snapshot)
+attendance.py        - sync_attendance_removal(action, snapshot)
+  action = "cancel" or "delete". The job finds the target record
+  (same keys as in post) with this docstatus:
+    cancel -> [1] | delete draft -> [0] | delete cancelled -> [1, 2]
+  Submitted match -> PUT docstatus 2. If action is delete -> DELETE.
+  No match = Success.
+
+
+6. CENTHR API LOGGER - centhr/centhr/doctype/centhr_api_logger/
+---------------------------------------------------------------
+centhr_api_logger.py
+  - before_insert: stores the job (sync_method + sync_kwargs) that wrote
+    the log, and moves the raw error to error_details.
+  - resync(): only for a Failed log that is not resynced, max 3 attempts.
+    Queues the same job again. For old logs, it works out the job from
+    request_method + docstatus. mark_resynced() marks all failed logs of
+    that job, so one click is enough.
+  - resync_logs(names): bulk resync from the list view.
+  - run_resync(log): the background job. A resynced log gets
+    resynced_from and resync_count + 1.
+
+readable_error.py - get_readable_error(log)
+  Changes the raw error into a short message the user can act on
+  (connection, HTTP status, missing fields, employee not synced,
+  target validation message).
+
+centhr_api_logger.js / centhr_api_logger_list.js
+  "Resync" button on the form, or the reason why resync is not possible.
+  "Resync" action in the list view.
