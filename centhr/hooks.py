@@ -86,13 +86,14 @@ app_license = "mit"
 # ------------
 
 # before_install = "centhr.install.before_install"
-# after_install = "centhr.install.after_install"
+after_install = "centhr.customization.employee.create_custom_fields"
+after_migrate = "centhr.customization.employee.create_custom_fields"
 
 # Uninstallation
 # ------------
 
 # before_uninstall = "centhr.uninstall.before_uninstall"
-# after_uninstall = "centhr.uninstall.after_uninstall"
+after_uninstall = "centhr.customization.employee.delete_custom_fields"
 
 # Integration Setup
 # ------------------
@@ -155,12 +156,18 @@ app_license = "mit"
 doc_events = {
 	"Employee": {
 		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
+		"on_update": "centhr.api.update.employee.enqueue_employee_update",
+		"on_trash": "centhr.api.delete.employee.enqueue_employee_delete",
 	},
 	"Leave Application": {
 		"on_submit": "centhr.api.post.leave_application.enqueue_leave_application_sync",
+		"on_cancel": "centhr.api.delete.leave_application.enqueue_leave_application_cancel",
+		"on_trash": "centhr.api.delete.leave_application.enqueue_leave_application_delete",
 	},
 	"Attendance": {
 		"on_submit": "centhr.api.post.attendance.enqueue_attendance_sync",
+		"on_cancel": "centhr.api.delete.attendance.enqueue_attendance_cancel",
+		"on_trash": "centhr.api.delete.attendance.enqueue_attendance_delete",
 	},
 }
 

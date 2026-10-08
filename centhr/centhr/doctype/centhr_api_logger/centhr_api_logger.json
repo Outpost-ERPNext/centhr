@@ -81,7 +81,7 @@
    "fieldname": "request_method",
    "fieldtype": "Select",
    "label": "Request Method",
-   "options": "\nGET\nPOST",
+   "options": "\nGET\nPOST\nPUT\nDELETE",
    "read_only": 1
   },
   {

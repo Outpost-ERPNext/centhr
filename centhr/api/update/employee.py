@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Outpost Work LLP and contributors
 # For license information, please see license.txt
 
+import html
 import json
 import re
 
@@ -9,41 +10,47 @@ import requests
 from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 from frappe.model import no_value_fields, table_fields
-from frappe.utils import get_request_session
+from requests.adapters import HTTPAdapter, Retry
 
 EMPLOYEE_ENDPOINT = "/api/resource/Employee"
 REQUEST_TIMEOUT = (10, 30)
 MAX_RETRIES = 2
 RESPONSE_LOG_LIMIT = 10000
-TARGET_REQUIRED_FIELDS = ("department", "company_email", "territory", "cost_center", "channel")
+# Nested set fields of the reports_to tree; the target maintains its own values
+EXCLUDED_FIELDS = ("lft", "rgt", "old_parent")
 
 
 class CentHRSyncError(frappe.ValidationError):
 	pass
 
 
-def enqueue_employee_sync(doc, method=None):
-	if not get_targets(doc.company):
+def enqueue_employee_update(doc, method=None):
+	if doc.flags.in_insert or not get_targets(doc.company):
 		return
 
+	doc_before_save = doc.get_doc_before_save()
+	employee_number = doc_before_save.employee_number if doc_before_save else doc.employee_number
+
 	frappe.enqueue(
-		"centhr.api.post.employee.sync_employee",
+		"centhr.api.update.employee.update_employee",
 		queue="short",
-		job_id=f"centhr_employee_sync::{doc.name}",
+		job_id=f"centhr_employee_update::{doc.name}",
 		deduplicate=True,
 		enqueue_after_commit=True,
 		employee=doc.name,
+		employee_number=employee_number,
 	)
 
 
-def sync_employee(employee: str) -> None:
+def update_employee(employee: str, employee_number: str | None = None) -> None:
 	doc = frappe.get_doc("Employee", employee)
 	payload = build_payload(doc)
+	employee_number = employee_number or payload["employee_number"]
 	failed_targets = []
 
 	for target in get_targets(doc.company):
 		try:
-			sync_to_target(doc, payload, target)
+			sync_to_target(doc, payload, target, employee_number)
 		except CentHRSyncError:
 			failed_targets.append(target.base_url)
 		except Exception as e:
@@ -61,6 +68,8 @@ def get_targets(company: str) -> list:
 
 def build_payload(doc) -> dict:
 	payload = get_field_values(doc)
+	for fieldname in EXCLUDED_FIELDS:
+		payload.pop(fieldname, None)
 	payload["employee_number"] = doc.employee_number or doc.name
 	return frappe.parse_json(frappe.as_json(payload))
 
@@ -77,31 +86,20 @@ def get_field_values(doc) -> dict:
 	return values
 
 
-def sync_to_target(doc, payload: dict, target) -> None:
+def sync_to_target(doc, payload: dict, target, employee_number: str) -> None:
 	url = target.base_url.rstrip("/") + EMPLOYEE_ENDPOINT
 	headers = {
 		"Authorization": f"token {target.api_key}:{target.get_password('api_secret')}",
 		"Accept": "application/json",
 	}
 
-	if find_target_employee(doc, target, url, headers, payload["employee_number"]):
-		return
+	target_employee = find_target_employee(doc, target, url, headers, employee_number)
+	if not target_employee:
+		error = _("Employee {0} is not synced to the target system").format(employee_number)
+		insert_log(doc, target, status="Failed", error=error)
+		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Update Failed"))
 
-	missing = [fieldname for fieldname in TARGET_REQUIRED_FIELDS if not payload.get(fieldname)]
-	if missing:
-		error = _("Missing fields required by the target system: {0}").format(", ".join(missing))
-		insert_log(
-			doc,
-			target,
-			status="Failed",
-			error=error,
-			request_method="POST",
-			endpoint=url,
-			request_payload=payload,
-		)
-		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Sync Failed"))
-
-	send_request(doc, target, "POST", url, headers, json=payload)
+	send_request(doc, target, "PUT", f"{url}/{target_employee}", headers, json=payload)
 
 
 def find_target_employee(doc, target, url: str, headers: dict, employee_number: str) -> str | None:
@@ -125,7 +123,7 @@ def send_request(doc, target, method: str, url: str, headers: dict, **kwargs) ->
 	response = None
 
 	try:
-		response = get_request_session(MAX_RETRIES).request(
+		response = get_session().request(
 			method, url, headers=headers, timeout=REQUEST_TIMEOUT, **kwargs
 		)
 		data, error = parse_response(response)
@@ -139,27 +137,25 @@ def send_request(doc, target, method: str, url: str, headers: dict, **kwargs) ->
 	if response is not None:
 		log_fields.update(http_status=response.status_code, api_response=response.text[:RESPONSE_LOG_LIMIT])
 
-	if method == "POST" and response is not None and response.status_code == 409:
-		insert_log(
-			doc,
-			target,
-			status="Success",
-			error=_("Employee already exists in the target system"),
-			**log_fields,
-		)
-		return {}
-
 	if error:
 		insert_log(doc, target, status="Failed", error=error, **log_fields)
-		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Sync Failed"))
+		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Update Failed"))
 
-	if method == "POST":
+	if isinstance(data, dict):
 		log_fields["target_reference"] = data.get("name")
 	elif data:
 		log_fields["target_reference"] = data[0].get("name")
 
 	insert_log(doc, target, status="Success", **log_fields)
 	return data
+
+
+def get_session() -> requests.Session:
+	# Retry connection errors only; a 500 from the target is returned so its error page gets logged
+	session = requests.Session()
+	session.mount("http://", HTTPAdapter(max_retries=Retry(total=MAX_RETRIES, raise_on_status=False)))
+	session.mount("https://", HTTPAdapter(max_retries=Retry(total=MAX_RETRIES, raise_on_status=False)))
+	return session
 
 
 def parse_response(response) -> tuple[dict | list | None, str | None]:
@@ -182,8 +178,6 @@ def get_http_error(response) -> str:
 		).format(status)
 	if status == 404:
 		return _("HTTP 404: endpoint not found. Check the Base URL in CentHr Settings")
-	if status == 409:
-		return _("HTTP 409: Employee already exists in the target system")
 	if status in (400, 417, 422):
 		return _("HTTP {0}: the target rejected the Employee data. {1}").format(
 			status, get_target_message(response)
@@ -197,12 +191,30 @@ def get_target_message(response) -> str:
 	try:
 		body = response.json()
 	except ValueError:
-		title = re.search(r"<title>(.*?)</title>", response.text, re.DOTALL)
-		return title.group(1).strip() if title else response.text[:500]
+		return get_html_error(response.text)
 
 	if not isinstance(body, dict):
 		return ""
 	return body.get("exception") or body.get("exc_type") or ""
+
+
+def get_html_error(text: str) -> str:
+	# Werkzeug debugger page: keep the title plus every traceback frame, as the page itself is truncated in the log
+	title = re.search(r"<title>(.*?)</title>", text, re.DOTALL)
+	frames = re.findall(
+		r'<cite class="filename">"(.*?)"</cite>,\s*line <em class="line">(\d+)</em>,\s*'
+		r'in <code class="function">(.*?)</code>.*?<pre class="line current">(.*?)</pre>',
+		text,
+		re.DOTALL,
+	)
+	if not title and not frames:
+		return text[:500]
+
+	lines = [title.group(1).strip() if title else ""]
+	for filename, lineno, function, code in frames:
+		code = html.unescape(re.sub(r"<[^>]+>", "", code)).strip()
+		lines.append(f"{filename}:{lineno} in {function}: {code}")
+	return "\n".join(lines)
 
 
 def insert_log(doc, target, status: str, error: str | None = None, **fields) -> None:
@@ -234,7 +246,7 @@ def notify_failure(doc, failed_targets: list[str]) -> None:
 			"type": "Alert",
 			"document_type": "Employee",
 			"document_name": doc.name,
-			"subject": _("CentHR sync of Employee {0} failed for: {1}").format(
+			"subject": _("CentHR update of Employee {0} failed for: {1}").format(
 				doc.name, ", ".join(failed_targets)
 			),
 		},

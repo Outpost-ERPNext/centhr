@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-import re
 
 import frappe
 import requests
@@ -11,39 +10,53 @@ from frappe.desk.doctype.notification_log.notification_log import enqueue_create
 from frappe.model import no_value_fields, table_fields
 from frappe.utils import get_request_session
 
+ATTENDANCE_ENDPOINT = "/api/resource/Attendance"
 EMPLOYEE_ENDPOINT = "/api/resource/Employee"
+REFERENCE_FIELDS = ("leave_application", "attendance_request", "amended_from")
 REQUEST_TIMEOUT = (10, 30)
 MAX_RETRIES = 2
 RESPONSE_LOG_LIMIT = 10000
-TARGET_REQUIRED_FIELDS = ("department", "company_email", "territory", "cost_center", "channel")
 
 
 class CentHRSyncError(frappe.ValidationError):
 	pass
 
 
-def enqueue_employee_sync(doc, method=None):
-	if not get_targets(doc.company):
+def enqueue_attendance_update(doc, method=None):
+	if doc.flags.in_insert or doc.docstatus != 0 or not get_targets(doc.company):
 		return
 
+	doc_before_save = doc.get_doc_before_save() or doc
+
 	frappe.enqueue(
-		"centhr.api.post.employee.sync_employee",
+		"centhr.api.update.attendance.update_attendance",
 		queue="short",
-		job_id=f"centhr_employee_sync::{doc.name}",
+		job_id=f"centhr_attendance_update::{doc.name}",
 		deduplicate=True,
 		enqueue_after_commit=True,
-		employee=doc.name,
+		attendance=doc.name,
+		employee=doc_before_save.employee,
+		attendance_date=str(doc_before_save.attendance_date),
 	)
 
 
-def sync_employee(employee: str) -> None:
-	doc = frappe.get_doc("Employee", employee)
+def update_attendance(
+	attendance: str, employee: str | None = None, attendance_date: str | None = None
+) -> None:
+	doc = frappe.get_doc("Attendance", attendance)
+	if doc.docstatus != 0:
+		return
+
 	payload = build_payload(doc)
+	lookup = {
+		"employee": employee or doc.employee,
+		"attendance_date": attendance_date or payload["attendance_date"],
+	}
 	failed_targets = []
 
 	for target in get_targets(doc.company):
 		try:
-			sync_to_target(doc, payload, target)
+			sync_to_target(doc, payload, target, lookup)
 		except CentHRSyncError:
 			failed_targets.append(target.base_url)
 		except Exception as e:
@@ -61,7 +74,10 @@ def get_targets(company: str) -> list:
 
 def build_payload(doc) -> dict:
 	payload = get_field_values(doc)
-	payload["employee_number"] = doc.employee_number or doc.name
+	for fieldname in REFERENCE_FIELDS:
+		payload[fieldname] = ""
+
+	payload["docstatus"] = 0
 	return frappe.parse_json(frappe.as_json(payload))
 
 
@@ -77,34 +93,59 @@ def get_field_values(doc) -> dict:
 	return values
 
 
-def sync_to_target(doc, payload: dict, target) -> None:
-	url = target.base_url.rstrip("/") + EMPLOYEE_ENDPOINT
+def sync_to_target(doc, payload: dict, target, lookup: dict) -> None:
+	base_url = target.base_url.rstrip("/")
 	headers = {
 		"Authorization": f"token {target.api_key}:{target.get_password('api_secret')}",
 		"Accept": "application/json",
 	}
 
-	if find_target_employee(doc, target, url, headers, payload["employee_number"]):
-		return
-
-	missing = [fieldname for fieldname in TARGET_REQUIRED_FIELDS if not payload.get(fieldname)]
-	if missing:
-		error = _("Missing fields required by the target system: {0}").format(", ".join(missing))
-		insert_log(
-			doc,
-			target,
-			status="Failed",
-			error=error,
-			request_method="POST",
-			endpoint=url,
-			request_payload=payload,
+	url = base_url + ATTENDANCE_ENDPOINT
+	lookup_employee = get_target_employee(doc, target, base_url, headers, lookup["employee"])
+	target_attendance = find_target_attendance(
+		doc, target, url, headers, lookup_employee, lookup["attendance_date"]
+	)
+	if not target_attendance:
+		error = _("No draft Attendance for Employee {0} on {1} in the target system").format(
+			lookup["employee"], lookup["attendance_date"]
 		)
-		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Sync Failed"))
+		insert_log(doc, target, status="Failed", error=error)
+		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Update Failed"))
 
-	send_request(doc, target, "POST", url, headers, json=payload)
+	employee = (
+		lookup_employee
+		if lookup["employee"] == doc.employee
+		else get_target_employee(doc, target, base_url, headers, doc.employee)
+	)
+	payload = {**payload, "employee": employee}
+	send_request(doc, target, "PUT", f"{url}/{target_attendance}", headers, json=payload)
 
 
-def find_target_employee(doc, target, url: str, headers: dict, employee_number: str) -> str | None:
+def get_target_employee(doc, target, base_url: str, headers: dict, employee: str) -> str:
+	employee_number = frappe.db.get_value("Employee", employee, "employee_number") or employee
+	data = send_request(
+		doc,
+		target,
+		"GET",
+		base_url + EMPLOYEE_ENDPOINT,
+		headers,
+		params={
+			"filters": json.dumps([["employee_number", "=", employee_number]]),
+			"fields": json.dumps(["name"]),
+			"limit_page_length": 1,
+		},
+	)
+	if data:
+		return data[0]["name"]
+
+	error = _("Employee {0} is not synced to the target system").format(employee_number)
+	insert_log(doc, target, status="Failed", error=error)
+	frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Update Failed"))
+
+
+def find_target_attendance(
+	doc, target, url: str, headers: dict, employee: str, attendance_date: str
+) -> str | None:
 	data = send_request(
 		doc,
 		target,
@@ -112,7 +153,13 @@ def find_target_employee(doc, target, url: str, headers: dict, employee_number: 
 		url,
 		headers,
 		params={
-			"filters": json.dumps([["employee_number", "=", employee_number]]),
+			"filters": json.dumps(
+				[
+					["employee", "=", employee],
+					["attendance_date", "=", attendance_date],
+					["docstatus", "=", 0],
+				]
+			),
 			"fields": json.dumps(["name"]),
 			"limit_page_length": 1,
 		},
@@ -139,21 +186,11 @@ def send_request(doc, target, method: str, url: str, headers: dict, **kwargs) ->
 	if response is not None:
 		log_fields.update(http_status=response.status_code, api_response=response.text[:RESPONSE_LOG_LIMIT])
 
-	if method == "POST" and response is not None and response.status_code == 409:
-		insert_log(
-			doc,
-			target,
-			status="Success",
-			error=_("Employee already exists in the target system"),
-			**log_fields,
-		)
-		return {}
-
 	if error:
 		insert_log(doc, target, status="Failed", error=error, **log_fields)
-		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Sync Failed"))
+		frappe.throw(error, exc=CentHRSyncError, title=_("CentHR Update Failed"))
 
-	if method == "POST":
+	if isinstance(data, dict):
 		log_fields["target_reference"] = data.get("name")
 	elif data:
 		log_fields["target_reference"] = data[0].get("name")
@@ -182,10 +219,8 @@ def get_http_error(response) -> str:
 		).format(status)
 	if status == 404:
 		return _("HTTP 404: endpoint not found. Check the Base URL in CentHr Settings")
-	if status == 409:
-		return _("HTTP 409: Employee already exists in the target system")
 	if status in (400, 417, 422):
-		return _("HTTP {0}: the target rejected the Employee data. {1}").format(
+		return _("HTTP {0}: the target rejected the Attendance data. {1}").format(
 			status, get_target_message(response)
 		)
 	if status >= 500:
@@ -197,8 +232,7 @@ def get_target_message(response) -> str:
 	try:
 		body = response.json()
 	except ValueError:
-		title = re.search(r"<title>(.*?)</title>", response.text, re.DOTALL)
-		return title.group(1).strip() if title else response.text[:500]
+		return response.text[:500]
 
 	if not isinstance(body, dict):
 		return ""
@@ -212,7 +246,7 @@ def insert_log(doc, target, status: str, error: str | None = None, **fields) -> 
 	frappe.get_doc(
 		{
 			"doctype": "CentHR API Logger",
-			"doctypes": "Employee",
+			"doctypes": "Attendance",
 			"reference_name": doc.name,
 			"name1": doc.employee_name,
 			"company": target.company,
@@ -232,9 +266,9 @@ def notify_failure(doc, failed_targets: list[str]) -> None:
 		users,
 		{
 			"type": "Alert",
-			"document_type": "Employee",
+			"document_type": "Attendance",
 			"document_name": doc.name,
-			"subject": _("CentHR sync of Employee {0} failed for: {1}").format(
+			"subject": _("CentHR update of Attendance {0} failed for: {1}").format(
 				doc.name, ", ".join(failed_targets)
 			),
 		},
