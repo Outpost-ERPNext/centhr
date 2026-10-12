@@ -153,11 +153,20 @@ after_uninstall = "centhr.customization.employee.delete_custom_fields"
 # 	}
 # }
 
+doctype_js = {"Employee": "public/js/employee.js"}
+
 doc_events = {
 	"Employee": {
+		"validate": "centhr.customization.employee.validate_cross_company",
 		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
-		"on_update": "centhr.api.update.employee.enqueue_employee_update",
-		"on_trash": "centhr.api.delete.employee.enqueue_employee_delete",
+		"on_update": [
+			"centhr.role_management.cross_company_role.sync_cross_company_permissions",
+			"centhr.api.update.employee.enqueue_employee_update",
+		],
+		"on_trash": [
+			"centhr.role_management.cross_company_role.remove_cross_company_permissions",
+			"centhr.api.delete.employee.enqueue_employee_delete",
+		],
 	},
 	"Leave Application": {
 		"on_submit": "centhr.api.post.leave_application.enqueue_leave_application_sync",

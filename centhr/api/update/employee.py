@@ -25,7 +25,8 @@ class CentHRSyncError(frappe.ValidationError):
 
 
 def enqueue_employee_update(doc, method=None):
-	if doc.flags.in_insert or not get_targets(doc.company):
+	# Records migrated from the CentHR site must not be sent back to it
+	if frappe.flags.centhr_migration or doc.flags.in_insert or not get_targets(doc.company):
 		return
 
 	doc_before_save = doc.get_doc_before_save()

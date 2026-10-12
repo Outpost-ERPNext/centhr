@@ -1,0 +1,428 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 0,
+ "allow_rename": 0,
+ "creation": "2026-10-09 17:37:54.635430",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company_tab",
+  "company",
+  "migration_order_section",
+  "migration_order",
+  "employee_tab",
+  "employee_filters_section",
+  "employee_status",
+  "employee_column_break_fetch",
+  "employee_fetch",
+  "employee_records_section",
+  "employee_summary",
+  "employee_table",
+  "leave_type_tab",
+  "leave_type_filters_section",
+  "leave_type_fetch",
+  "leave_type_records_section",
+  "leave_type_summary",
+  "leave_type_table",
+  "leave_policy_assignment_tab",
+  "leave_policy_assignment_filters_section",
+  "leave_policy_assignment_from_date",
+  "leave_policy_assignment_to_date",
+  "leave_policy_assignment_column_break_1",
+  "leave_policy_assignment_employee",
+  "leave_policy_assignment_column_break_fetch",
+  "leave_policy_assignment_fetch",
+  "leave_policy_assignment_records_section",
+  "leave_policy_assignment_summary",
+  "leave_policy_assignment_table",
+  "leave_allocation_tab",
+  "leave_allocation_filters_section",
+  "leave_allocation_from_date",
+  "leave_allocation_to_date",
+  "leave_allocation_column_break_1",
+  "leave_allocation_employee",
+  "leave_allocation_leave_type",
+  "leave_allocation_column_break_fetch",
+  "leave_allocation_fetch",
+  "leave_allocation_records_section",
+  "leave_allocation_summary",
+  "leave_allocation_table",
+  "leave_application_tab",
+  "leave_application_filters_section",
+  "leave_application_from_date",
+  "leave_application_to_date",
+  "leave_application_column_break_1",
+  "leave_application_employee",
+  "leave_application_status",
+  "leave_application_column_break_fetch",
+  "leave_application_fetch",
+  "leave_application_records_section",
+  "leave_application_summary",
+  "leave_application_table",
+  "attendance_tab",
+  "attendance_filters_section",
+  "attendance_from_date",
+  "attendance_to_date",
+  "attendance_column_break_1",
+  "attendance_employee",
+  "attendance_status",
+  "attendance_column_break_fetch",
+  "attendance_fetch",
+  "attendance_records_section",
+  "attendance_summary",
+  "attendance_table"
+ ],
+ "fields": [
+  {
+   "fieldname": "company_tab",
+   "fieldtype": "Tab Break",
+   "label": "Company"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "migration_order_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "migration_order",
+   "fieldtype": "HTML",
+   "label": "Migration Order"
+  },
+  {
+   "fieldname": "employee_tab",
+   "fieldtype": "Tab Break",
+   "label": "Employee"
+  },
+  {
+   "fieldname": "employee_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "default": "Active",
+   "fieldname": "employee_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nInactive\nAll"
+  },
+  {
+   "fieldname": "employee_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "employee_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "employee_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "employee_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_type_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leave Type"
+  },
+  {
+   "fieldname": "leave_type_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "description": "Leave Type has no Company, so every Leave Type of the connected site is fetched.",
+   "fieldname": "leave_type_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "leave_type_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_type_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "leave_type_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_policy_assignment_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leave Policy Assignment"
+  },
+  {
+   "fieldname": "leave_policy_assignment_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "leave_policy_assignment_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "leave_policy_assignment_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "leave_policy_assignment_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_policy_assignment_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "leave_policy_assignment_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_policy_assignment_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "leave_policy_assignment_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_policy_assignment_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "leave_policy_assignment_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_allocation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leave Allocation"
+  },
+  {
+   "fieldname": "leave_allocation_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "leave_allocation_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "leave_allocation_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "leave_allocation_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_allocation_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "leave_allocation_leave_type",
+   "fieldtype": "Link",
+   "label": "Leave Type",
+   "options": "Leave Type"
+  },
+  {
+   "fieldname": "leave_allocation_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_allocation_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "leave_allocation_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_allocation_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "leave_allocation_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_application_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leave Application"
+  },
+  {
+   "fieldname": "leave_application_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "leave_application_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "leave_application_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "leave_application_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_application_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "default": "All",
+   "fieldname": "leave_application_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "All\nOpen\nApproved\nRejected"
+  },
+  {
+   "fieldname": "leave_application_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "leave_application_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "leave_application_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_application_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "leave_application_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "attendance_tab",
+   "fieldtype": "Tab Break",
+   "label": "Attendance"
+  },
+  {
+   "fieldname": "attendance_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "attendance_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "attendance_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "attendance_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attendance_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "default": "All",
+   "fieldname": "attendance_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "All\nPresent\nAbsent\nOn Leave\nHalf Day\nWork From Home"
+  },
+  {
+   "fieldname": "attendance_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attendance_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "attendance_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "attendance_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "attendance_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  }
+ ],
+ "grid_page_length": 50,
+ "hide_toolbar": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-09 18:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "Centhr Data Migration Tool",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

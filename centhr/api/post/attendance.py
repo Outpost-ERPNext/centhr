@@ -23,7 +23,8 @@ class CentHRSyncError(frappe.ValidationError):
 
 
 def enqueue_attendance_sync(doc, method=None):
-	if not get_targets(doc.company):
+	# Records migrated from the CentHR site must not be sent back to it
+	if frappe.flags.centhr_migration or not get_targets(doc.company):
 		return
 
 	frappe.enqueue(

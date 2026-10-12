@@ -125,3 +125,50 @@ readable_error.py - get_readable_error(log)
 centhr_api_logger.js / centhr_api_logger_list.js
   "Resync" button on the form, or the reason why resync is not possible.
   "Resync" action in the list view.
+
+7. DATA MIGRATION - centhr/api/migrate/
+---------------------------------------
+  Pull direction: copies records FROM the company's CentHR site (the
+  CentHr Settings row of that company) INTO this site. Used by the
+  desk tool "Centhr Data Migration Tool" (/app/centhr-data-migration-tool).
+
+  Sections, in the order to migrate them:
+    Leave Type -> Employee -> Leave Policy Assignment / Leave Allocation
+    -> Leave Application -> Attendance
+
+  client.py - TargetClient(company)
+    GET /api/resource with pagination (500 per page). Same timeout,
+    retries and HTTP error messages as the push files. A failure raises
+    MigrationError with the request details for the log.
+
+  employee_map.py - EmployeeMap
+    Matches employees on employee_number (or the name when it is empty),
+    the same key as the push sync.
+
+  base.py - Migrator
+    fetch(filters): reads the records, then sets migration_status per row:
+      Already Exists  a matching record is on this site
+      Success         this tool created the matching record
+      Failed          the last attempt failed (error + log link)
+      Pending         never tried
+    migrate(name): reads the full record, stops if it already exists here,
+      maps Employee links, clears optional links that do not exist here,
+      drops attachments and naming fields, inserts, and submits it when it
+      is submitted on the CentHR site. Each record writes one CentHR API
+      Logger entry (reference_name = CentHR name, target_reference = name
+      here) with sync_method <module>.migrate, so Resync retries that one
+      record. Cancelled records are not fetched.
+
+  employee.py, leave_type.py, leave_policy_assignment.py,
+  leave_allocation.py, leave_application.py, attendance.py
+    Per-DocType columns, filters and duplicate key.
+
+  While a record is migrated, frappe.flags.centhr_migration is set. The
+  push hooks (post/employee, update/employee, post/leave_application,
+  post/attendance) check it, so migrated records are not sent back.
+
+  Tool endpoints (centhr_data_migration_tool.py):
+    get_records(section, company, filters)  - fetch, synchronous
+    migrate_records(section, company, names) - queues run_migration on
+      the long queue; progress per record over realtime event
+      "centhr_migration_progress".
