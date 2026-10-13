@@ -64,6 +64,11 @@ app_license = "mit"
 # 	"Role": "home_page"
 # }
 
+# serve the frappe-ui frontend (frontend/) for every path under /centhr
+website_route_rules = [
+	{"from_route": "/centhr/<path:app_path>", "to_route": "centhr"},
+]
+
 # Generators
 # ----------
 

@@ -1,0 +1,9 @@
+{
+	"private": true,
+	"name": "centhr",
+	"scripts": {
+		"postinstall": "cd frontend && yarn install --check-files",
+		"dev": "cd frontend && yarn dev",
+		"build": "cd frontend && yarn build"
+	}
+}
