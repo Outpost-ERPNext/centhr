@@ -25,8 +25,12 @@ class TargetClient:
 		self.target = target
 		self.ref = ref
 
-	def get_list(self, doctype: str, filters: list, fields: list) -> list:
-		params = {"filters": json.dumps(filters), "fields": json.dumps(fields), "limit_page_length": 1}
+	def get_list(
+		self, doctype: str, filters: list, fields: list, or_filters: list | None = None, limit: int = 1
+	) -> list:
+		params = {"filters": json.dumps(filters), "fields": json.dumps(fields), "limit_page_length": limit}
+		if or_filters:
+			params["or_filters"] = json.dumps(or_filters)
 		return self.request("GET", self.url(doctype), params=params)
 
 	def insert(self, doctype: str, payload: dict) -> dict:

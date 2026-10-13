@@ -6,7 +6,8 @@
 Every save of a synced doctype enqueues `sync_to_targets`, which POSTs the record the first
 time and PUTs it afterwards (including submit and cancel). Deleting the record enqueues
 `delete_from_targets`. The target-side name of a record is taken from its successful POST
-in CentHR API Logger, except for doctypes named by hand (Shift Type), which keep their name.
+in CentHR API Logger, or from the migration tool's log when the record came from the CentHR
+site. Doctypes named by hand (Shift Type) keep their name everywhere.
 """
 
 import frappe
@@ -17,6 +18,7 @@ from centhr.api.post.employee import CentHRSyncError, get_field_values
 from centhr.api.target_client import TargetClient
 
 LOCK_TIMEOUT = 300
+MIGRATE_MODULE_PREFIX = "centhr.api.migrate."
 
 # exclude: links to local records that are not synced, so their names mean nothing on the target
 # match_by_name: the record has the same name on every system
@@ -152,6 +154,9 @@ class RecordSync:
 		return frappe._dict(data[0]) if data else None
 
 	def get_synced_name(self, name: str) -> str | None:
+		return self.get_pushed_name(name) or self.get_migrated_name(name)
+
+	def get_pushed_name(self, name: str) -> str | None:
 		return frappe.db.get_value(
 			"CentHR API Logger",
 			{
@@ -166,13 +171,38 @@ class RecordSync:
 			order_by="creation desc",
 		)
 
+	def get_migrated_name(self, name: str) -> str | None:
+		# the migration tool logs the CentHR name as reference_name and the local name as target_reference
+		return frappe.db.get_value(
+			"CentHR API Logger",
+			{
+				"doctypes": self.ref.doctype,
+				"target_reference": name,
+				"company": self.client.target.company,
+				"sync_method": ("like", f"{MIGRATE_MODULE_PREFIX}%"),
+				"status": "Success",
+			},
+			"reference_name",
+			order_by="creation desc",
+		)
+
 	def get_remote_employee(self, employee: str) -> str:
-		# Employee sync sends employee_number (or the local ID) as the target's employee_number
+		# Employee sync sends employee_number (or the local ID) as the target's employee_number.
+		# Employees migrated from the target keep its ID, which may have no employee_number there.
 		employee_number = frappe.db.get_value("Employee", employee, "employee_number") or employee
-		data = self.client.get_list("Employee", [["employee_number", "=", employee_number]], ["name"])
-		if not data:
+		rows = self.client.get_list(
+			"Employee",
+			[],
+			["name", "employee_number"],
+			or_filters=[["employee_number", "=", employee_number], ["name", "=", employee_number]],
+			limit=2,
+		)
+		by_number = [row for row in rows if row.get("employee_number") == employee_number]
+		by_name = [row for row in rows if row["name"] == employee_number and not row.get("employee_number")]
+		match = (by_number or by_name or [None])[0]
+		if not match:
 			self.client.fail(_("Employee {0} does not exist in the target system").format(employee))
-		return data[0]["name"]
+		return match["name"]
 
 
 def sync_lock(doctype: str, name: str):
