@@ -183,6 +183,13 @@ doc_events = {
 		"on_cancel": "centhr.api.delete.attendance.enqueue_attendance_cancel",
 		"on_trash": "centhr.api.delete.attendance.enqueue_attendance_delete",
 	},
+	**{
+		doctype: {
+			"on_change": "centhr.api.sync.enqueue_sync",
+			"on_trash": "centhr.api.sync.enqueue_delete",
+		}
+		for doctype in ("Leave Allocation", "Employee Checkin", "Shift Type")
+	},
 }
 
 # Scheduled Tasks
