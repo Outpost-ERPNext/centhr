@@ -221,3 +221,27 @@ centhr_api_logger.js / centhr_api_logger_list.js
   target_client.py - TargetClient(target, ref)
     get_list, insert, update, delete on /api/resource. Writes one
     CentHR API Logger record per request.
+
+
+9. WEB FORM EMAIL OTP - centhr/api/otp/web_form.py
+--------------------------------------------------
+  The Attendance (Employee Checkin) and Leave Application web forms ask
+  for a code that is sent to the employee's company email before they
+  save.
+
+  public/js/web_form_otp.js (webform_include_js for both doctypes)
+    Submit -> send_otp -> dialog "Verify Your Email" -> verify_otp ->
+    the form saves with the token. "Resend Code" sends a new code.
+
+  send_otp(employee) - guest
+    6-digit code to Employee.company_email (Active employees only).
+    Only a hash is kept in Redis, for 10 minutes. Max 5 codes per
+    employee in 10 minutes.
+  verify_otp(employee, otp) - guest
+    5 wrong codes cancel the code. A correct code returns a token for
+    this employee, valid for 10 minutes.
+  validate_web_form_otp - before_insert, web form submissions only
+    No valid token for the same employee = the record is not saved.
+    The token is deleted after commit, so a failed save can be fixed
+    and sent again without a new code.
+  Needs an outgoing Email Account.

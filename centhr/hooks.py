@@ -37,6 +37,10 @@ app_license = "mit"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
+webform_include_js = {
+	"Employee Checkin": "public/js/web_form_otp.js",
+	"Leave Application": "public/js/web_form_otp.js",
+}
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
@@ -174,6 +178,7 @@ doc_events = {
 		],
 	},
 	"Leave Application": {
+		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",
 		"on_submit": "centhr.api.post.leave_application.enqueue_leave_application_sync",
 		"on_cancel": "centhr.api.delete.leave_application.enqueue_leave_application_cancel",
 		"on_trash": "centhr.api.delete.leave_application.enqueue_leave_application_delete",
@@ -191,6 +196,7 @@ doc_events = {
 		"on_trash": "centhr.api.delete.leave_allocation.enqueue_leave_allocation_delete",
 	},
 	"Employee Checkin": {
+		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",
 		"after_insert": "centhr.api.post.employee_checkin.enqueue_employee_checkin_sync",
 		"on_update": "centhr.api.update.employee_checkin.enqueue_employee_checkin_update",
 		"on_trash": "centhr.api.delete.employee_checkin.enqueue_employee_checkin_delete",
