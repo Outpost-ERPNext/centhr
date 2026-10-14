@@ -1,21 +1,24 @@
 # Copyright (c) 2026, Outpost Work LLP and contributors
 # For license information, please see license.txt
 
-"""Create, update and delete HR records on the target systems configured in CentHr Settings.
+"""Shared code for the Leave Allocation, Employee Checkin and Shift Type APIs.
 
-Every save of a synced doctype enqueues `sync_to_targets`, which POSTs the record the first
-time and PUTs it afterwards (including submit and cancel). Deleting the record enqueues
-`delete_from_targets`. The target-side name of a record is taken from its successful POST
-in CentHR API Logger, or from the migration tool's log when the record came from the CentHR
-site. Doctypes named by hand (Shift Type) keep their name everywhere.
+The files in centhr/api/post, update and delete hold the hooks and background jobs of each
+doctype and call `enqueue_job`, `sync_record` and `delete_record` from here.
+
+`sync_record` POSTs the record when it is not on the target yet and PUTs it otherwise
+(including submit and cancel), so a create that failed is sent again by the next update.
+The target-side name of a record is taken from its successful POST in CentHR API Logger,
+or from the migration tool's log when the record came from the CentHR site. Doctypes named
+by hand (Shift Type) keep their name everywhere.
 """
 
 import frappe
 from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 
+from centhr.api.common.target_client import TargetClient
 from centhr.api.post.employee import CentHRSyncError, get_field_values
-from centhr.api.target_client import TargetClient
 
 LOCK_TIMEOUT = 300
 MIGRATE_MODULE_PREFIX = "centhr.api.migrate."
@@ -31,37 +34,15 @@ SYNC_CONFIG = {
 }
 
 
-def enqueue_sync(doc, method=None):
+def enqueue_job(method: str, doc, **kwargs) -> None:
 	# Records migrated from the CentHR site must not be sent back to it
 	if frappe.flags.centhr_migration or not get_targets(get_company(doc)):
 		return
 
-	frappe.enqueue(
-		"centhr.api.sync.sync_to_targets",
-		queue="short",
-		enqueue_after_commit=True,
-		doctype=doc.doctype,
-		name=doc.name,
-	)
+	frappe.enqueue(method, queue="short", enqueue_after_commit=True, **kwargs)
 
 
-def enqueue_delete(doc, method=None):
-	company = get_company(doc)
-	if frappe.flags.centhr_migration or not get_targets(company):
-		return
-
-	frappe.enqueue(
-		"centhr.api.sync.delete_from_targets",
-		queue="short",
-		enqueue_after_commit=True,
-		doctype=doc.doctype,
-		name=doc.name,
-		company=company,
-		label=get_label(doc),
-	)
-
-
-def sync_to_targets(doctype: str, name: str) -> None:
+def sync_record(doctype: str, name: str) -> None:
 	with sync_lock(doctype, name):
 		if not frappe.db.exists(doctype, name):
 			return
@@ -71,7 +52,8 @@ def sync_to_targets(doctype: str, name: str) -> None:
 		run_for_targets(ref, get_company(doc), lambda target: RecordSync(ref, target, doc).upsert())
 
 
-def delete_from_targets(doctype: str, name: str, company: str | None, label: str) -> None:
+def delete_record(doctype: str, name: str, company: str | None, label: str) -> None:
+	# The local record is gone, so the job gets its company and label from the hook
 	with sync_lock(doctype, name):
 		ref = frappe._dict(doctype=doctype, name=name, label=label)
 		run_for_targets(ref, company, lambda target: RecordSync(ref, target).delete())

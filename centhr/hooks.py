@@ -183,12 +183,22 @@ doc_events = {
 		"on_cancel": "centhr.api.delete.attendance.enqueue_attendance_cancel",
 		"on_trash": "centhr.api.delete.attendance.enqueue_attendance_delete",
 	},
-	**{
-		doctype: {
-			"on_change": "centhr.api.sync.enqueue_sync",
-			"on_trash": "centhr.api.sync.enqueue_delete",
-		}
-		for doctype in ("Leave Allocation", "Employee Checkin", "Shift Type")
+	"Leave Allocation": {
+		"after_insert": "centhr.api.post.leave_allocation.enqueue_leave_allocation_sync",
+		"on_update": "centhr.api.update.leave_allocation.enqueue_leave_allocation_update",
+		"on_cancel": "centhr.api.update.leave_allocation.enqueue_leave_allocation_update",
+		"on_update_after_submit": "centhr.api.update.leave_allocation.enqueue_leave_allocation_update",
+		"on_trash": "centhr.api.delete.leave_allocation.enqueue_leave_allocation_delete",
+	},
+	"Employee Checkin": {
+		"after_insert": "centhr.api.post.employee_checkin.enqueue_employee_checkin_sync",
+		"on_update": "centhr.api.update.employee_checkin.enqueue_employee_checkin_update",
+		"on_trash": "centhr.api.delete.employee_checkin.enqueue_employee_checkin_delete",
+	},
+	"Shift Type": {
+		"after_insert": "centhr.api.post.shift_type.enqueue_shift_type_sync",
+		"on_update": "centhr.api.update.shift_type.enqueue_shift_type_update",
+		"on_trash": "centhr.api.delete.shift_type.enqueue_shift_type_delete",
 	},
 }
 

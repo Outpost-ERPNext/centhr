@@ -12,6 +12,13 @@ Flow: doc event (hooks.py) -> enqueue_* -> background job -> HTTP request
   Employee           after_insert -> post   | on_update -> update | on_trash -> delete
   Leave Application  on_submit    -> post   | on_cancel -> cancel | on_trash -> delete
   Attendance         on_submit    -> post   | on_cancel -> cancel | on_trash -> delete
+  Leave Allocation   after_insert -> post   | on_update, on_cancel, on_update_after_submit -> update
+                     | on_trash -> delete
+  Employee Checkin   after_insert -> post   | on_update -> update | on_trash -> delete
+  Shift Type         after_insert -> post   | on_update -> update | on_trash -> delete
+
+  Leave Allocation, Employee Checkin and Shift Type use the shared code in
+  centhr/api/common/. See section 8.
 
   update/attendance.py and update/leave_application.py exist but are NOT
   in hooks.py, so they do not run.
@@ -165,10 +172,52 @@ centhr_api_logger.js / centhr_api_logger_list.js
 
   While a record is migrated, frappe.flags.centhr_migration is set. The
   push hooks (post/employee, update/employee, post/leave_application,
-  post/attendance) check it, so migrated records are not sent back.
+  post/attendance, and all Leave Allocation, Employee Checkin and Shift
+  Type hooks) check it, so migrated records are not sent back.
 
   Tool endpoints (centhr_data_migration_tool.py):
     get_records(section, company, filters)  - fetch, synchronous
     migrate_records(section, company, names) - queues run_migration on
       the long queue; progress per record over realtime event
       "centhr_migration_progress".
+
+
+8. LEAVE ALLOCATION, EMPLOYEE CHECKIN, SHIFT TYPE - centhr/api/common/
+-----------------------------------------------------------------------
+  The post/, update/ and delete/ files of these doctypes only hold the
+  hook and the job. They call the shared code in common/:
+
+  record_sync.py
+    enqueue_job(method, doc, **kwargs)
+      Queues the job on "short" after commit. Skips records written by the
+      migration tool, and companies with no CentHr Settings row.
+    sync_record(doctype, name) - used by post and update
+      Finds the record on the target. Not found = POST. Found = PUT. So an
+      update also creates a record that failed to POST before.
+      Target record submitted: PUT only "Allow on Submit" fields, or
+      docstatus 2 when the local record is cancelled.
+    delete_record(doctype, name, company, label) - used by delete
+      Not found = nothing to do. Target record submitted = PUT docstatus 2
+      first. Then DELETE. 404 = Success.
+    One Redis lock per record, so two jobs of one record do not run at
+    the same time (for example insert and submit).
+
+  Target name of a record:
+    - Shift Type: the same name on both sites.
+    - Others: target_reference of the successful POST log. For a record
+      that the migration tool copied from CentHR: reference_name of its
+      migration log (sync_method starts with "centhr.api.migrate.").
+  Target Employee: employee_number = local employee_number (or the local
+    name). If no match: name = that value with an empty employee_number,
+    for employees that the migration tool copied from CentHR.
+  Payload: all value fields, docstatus for submittable doctypes. Links to
+    local records that are not synced are not sent:
+      Leave Allocation  compensatory_request, leave_period, leave_policy,
+                        leave_policy_assignment
+      Employee Checkin  attendance
+  Shift Type has no company, so it goes to every target once.
+  Employee Checkin uses the company of its employee.
+
+  target_client.py - TargetClient(target, ref)
+    get_list, insert, update, delete on /api/resource. Writes one
+    CentHR API Logger record per request.
