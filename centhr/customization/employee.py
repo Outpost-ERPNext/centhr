@@ -1,6 +1,10 @@
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+# ABBR resolves to the employee's Company.abbr (erpnext naming_series_variables hook)
+EMPLOYEE_NAMING_SERIES = ".ABBR.-EMP-.#####"
 
 
 def create_custom_fields():
@@ -55,6 +59,16 @@ def create_custom_fields():
 				frappe.db.commit()
 				frappe.clear_cache(doctype=doctype)
 
+	set_employee_naming_series()
+
+
+def set_employee_naming_series():
+	for prop in ("options", "default"):
+		make_property_setter(
+			"Employee", "naming_series", prop, EMPLOYEE_NAMING_SERIES, "Text", validate_fields_for_doctype=False
+		)
+	frappe.clear_cache(doctype="Employee")
+
 
 def delete_custom_fields():
 	custom_fields_to_delete = {"Employee": ["territory", "cost_center", "channel", "cross_company_reports", "cross_company"]}
@@ -65,6 +79,12 @@ def delete_custom_fields():
 				frappe.delete_doc("Custom Field", f"{doctype}-{field_name}", ignore_missing=True)
 				frappe.db.commit()
 				frappe.clear_cache(doctype=doctype)
+
+	frappe.db.delete(
+		"Property Setter",
+		{"doc_type": "Employee", "field_name": "naming_series", "property": ("in", ["options", "default"])},
+	)
+	frappe.clear_cache(doctype="Employee")
 
 
 def validate_cross_company(doc, method=None):

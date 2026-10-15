@@ -1,1 +1,81 @@
 @import "frappe-ui/style.css";
+
+/* CentHR design tokens (from the shared design reference) */
+:root {
+	--ch-bg: #fff;
+	--ch-sb: #f8f8f8;
+	--ch-surface: #fff;
+	--ch-subtle: #f3f3f3;
+	--ch-subtle-2: #ebebeb;
+	--ch-hover: #f8f8f8;
+	--ch-hover-sb: #ededed;
+	--ch-weekend: #fafafa;
+	--ch-line: #ededed;
+	--ch-line-2: #dcdcdc;
+	--ch-ink: #171717;
+	--ch-ink-2: #525252;
+	--ch-ink-3: #6f6f6f;
+	--ch-ink-4: #a3a3a3;
+	--ch-primary: #171717;
+	--ch-primary-hover: #383838;
+	--ch-on-primary: #fff;
+	--ch-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);
+	--ch-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
+	--ch-shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+	--ch-green-bg: #e5f5ea;
+	--ch-green-ink: #17703f;
+	--ch-green-dot: #2fa36b;
+	--ch-amber-bg: #fcf1d9;
+	--ch-amber-ink: #8a5800;
+	--ch-amber-dot: #e3960f;
+	--ch-red-bg: #fdeceb;
+	--ch-red-ink: #b9302a;
+	--ch-red-dot: #e0443c;
+	--ch-blue-bg: #e8f1fd;
+	--ch-blue-ink: #1d5fbf;
+	--ch-blue-dot: #3a80e6;
+	--ch-gray-bg: #f0f0f0;
+	--ch-gray-ink: #4f4f4f;
+	--ch-gray-dot: #a8a8a8;
+}
+
+[data-theme="dark"] {
+	--ch-bg: #171717;
+	--ch-sb: #1c1c1c;
+	--ch-surface: #1f1f1f;
+	--ch-subtle: #262626;
+	--ch-subtle-2: #303030;
+	--ch-hover: #1f1f1f;
+	--ch-hover-sb: #262626;
+	--ch-weekend: #1b1b1b;
+	--ch-line: #2a2a2a;
+	--ch-line-2: #383838;
+	--ch-ink: #efefef;
+	--ch-ink-2: #c2c2c2;
+	--ch-ink-3: #9a9a9a;
+	--ch-ink-4: #6b6b6b;
+	--ch-primary: #efefef;
+	--ch-primary-hover: #d6d6d6;
+	--ch-on-primary: #171717;
+	--ch-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+	--ch-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--ch-shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+	--ch-green-bg: rgba(47, 163, 107, 0.18);
+	--ch-green-ink: #6fd3a0;
+	--ch-amber-bg: rgba(227, 150, 15, 0.18);
+	--ch-amber-ink: #f2c063;
+	--ch-red-bg: rgba(224, 68, 60, 0.18);
+	--ch-red-ink: #f58c86;
+	--ch-blue-bg: rgba(58, 128, 230, 0.18);
+	--ch-blue-ink: #8cb8f5;
+	--ch-gray-bg: rgba(168, 168, 168, 0.16);
+	--ch-gray-ink: #c8c8c8;
+}
+
+html,
+body {
+	background: var(--ch-bg);
+	color: var(--ch-ink);
+	font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+	font-feature-settings: "cv11";
+}

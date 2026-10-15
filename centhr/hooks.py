@@ -1,5 +1,5 @@
 app_name = "centhr"
-app_title = "centhr"
+app_title = "CentHR"
 app_publisher = "Outpost Work LLP"
 app_description = "centhr"
 app_email = "harpreet@outpost.work"
@@ -11,15 +11,15 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "centhr",
-# 		"logo": "/assets/centhr/logo.png",
-# 		"title": "centhr",
-# 		"route": "/centhr",
-# 		"has_permission": "centhr.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "centhr",
+		"logo": "/assets/centhr/images/centhr-logo.svg",
+		"title": "CentHR",
+		"route": "/centhr",
+		"has_permission": "centhr.api.permission.has_app_permission",
+	}
+]
 
 # Includes in <head>
 # ------------------
