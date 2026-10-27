@@ -14,8 +14,9 @@ frappe.ready(() => {
 			return save();
 		}
 
-		// Show missing fields before sending a code
+		// Show missing fields and the form's own checks before sending a code
 		if (!web_form.get_values(web_form.allow_incomplete, true)) return false;
+		if (web_form.validate && web_form.validate() === false) return false;
 
 		const employee = web_form.get_value("employee");
 		send_code(employee).then((email) => email && ask_code(employee, email));

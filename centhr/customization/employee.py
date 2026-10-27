@@ -47,6 +47,37 @@ def create_custom_fields():
 				"depends_on":"eval:doc.cross_company_reports == 1",
 				"mandatory_depends_on":"eval:doc.cross_company_reports == 1"
     
+			},
+			{
+				"fieldname":"salary_structure",
+				"fieldtype":"Link",
+				"label":"Salary Structure",
+				"options":"Salary Structure",
+				"insert_after":"salary_mode",
+					"reqd":1
+			},
+			{
+				"fieldname":"employee_base",
+				"fieldtype":"Float",
+				"label":"Employee Base",
+				"insert_after":"salary_structure",
+				"reqd":1
+			},
+			{
+				"fieldname":"from_date",
+				"fieldtype":"Date",
+				"label":"From Date",
+				"insert_after":"employee_base",
+				"reqd":1
+			},
+			{
+				"fieldname":"payroll_payable_account",
+				"fieldtype":"Link",
+				"label":"Payroll Payable Account",
+				"options":"Account",
+				"insert_after":"from_date",
+				"reqd":1,
+				"link_filters": '[["Account","account_type","=","Payable"]]'
 			}
    
 		]
@@ -71,7 +102,7 @@ def set_employee_naming_series():
 
 
 def delete_custom_fields():
-	custom_fields_to_delete = {"Employee": ["territory", "cost_center", "channel", "cross_company_reports", "cross_company"]}
+	custom_fields_to_delete = {"Employee": ["territory", "cost_center", "channel", "cross_company_reports", "cross_company", "salary_structure", "employee_base", "from_date", "payroll_payable_account"]}
 
 	for doctype, fields in custom_fields_to_delete.items():
 		for field_name in fields:

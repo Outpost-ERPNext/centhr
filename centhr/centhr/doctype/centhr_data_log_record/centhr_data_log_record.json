@@ -42,7 +42,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nSuccess\nAlready Exists\nFailed",
+   "options": "Pending\nSuccess\nAlready Exists\nFailed\nStopped",
    "read_only": 1
   },
   {
@@ -77,7 +77,7 @@
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
- "modified": "2026-10-12 23:45:00.000000",
+ "modified": "2026-10-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "Centhr Data Log Record",

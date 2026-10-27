@@ -8,14 +8,11 @@ def sync_cross_company_permissions(doc, method=None):
 	old_user = _cross_manager_user(old)
 	new_user = _cross_manager_user(doc)
 
-	if old_user == new_user and (not old or old.company == doc.company):
-		return
-
-	if old_user:
+	if old_user and (old_user, old.company) != (new_user, doc.company):
 		_revoke_cross_company_permissions(doc.name, old.company, old_user)
+	# re-run on every save: it only adds what is missing
 	if new_user:
-		add_user_permission("Employee", doc.name, new_user, ignore_permissions=True)
-		add_user_permission("Company", doc.company, new_user, ignore_permissions=True)
+		_grant_cross_company_permissions(doc, new_user)
 
 
 def remove_cross_company_permissions(doc, method=None):
@@ -27,6 +24,26 @@ def remove_cross_company_permissions(doc, method=None):
 def _cross_manager_user(doc):
 	if doc and doc.cross_company_reports and doc.reports_to:
 		return frappe.db.get_value("Employee", doc.reports_to, "user_id")
+
+
+def _grant_cross_company_permissions(doc, user):
+	"""Add access to the employee's company without narrowing what the user could already see:
+	a User Permission also hides every value of that DocType not listed for the user."""
+	manager_company = frappe.db.get_value("Employee", doc.reports_to, "company")
+
+	if not _has_permission(user, "Company"):
+		# the first Company permission would hide the manager's own company
+		add_user_permission("Company", manager_company, user, ignore_permissions=True, is_default=1)
+	add_user_permission("Company", doc.company, user, ignore_permissions=True)
+
+	# without an Employee restriction the Company permission already shows this employee;
+	# adding one would hide every other employee
+	if _has_permission(user, "Employee"):
+		add_user_permission("Employee", doc.name, user, ignore_permissions=True)
+
+
+def _has_permission(user, doctype):
+	return bool(frappe.db.exists("User Permission", {"user": user, "allow": doctype}))
 
 
 def _revoke_cross_company_permissions(employee, company, user):

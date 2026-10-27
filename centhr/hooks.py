@@ -40,6 +40,7 @@ add_to_apps_screen = [
 webform_include_js = {
 	"Employee Checkin": "public/js/web_form_otp.js",
 	"Leave Application": "public/js/web_form_otp.js",
+	"Attendance Request": "public/js/web_form_otp.js",
 }
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
@@ -95,8 +96,14 @@ website_route_rules = [
 # ------------
 
 # before_install = "centhr.install.before_install"
-after_install = "centhr.customization.employee.create_custom_fields"
-after_migrate = "centhr.customization.employee.create_custom_fields"
+after_install = [
+	"centhr.customization.employee.create_custom_fields",
+	"centhr.customization.leave_application.create_custom_fields",
+]
+after_migrate = [
+	"centhr.customization.employee.create_custom_fields",
+	"centhr.customization.leave_application.create_custom_fields",
+]
 
 # Uninstallation
 # ------------
@@ -188,6 +195,13 @@ doc_events = {
 		"on_cancel": "centhr.api.delete.attendance.enqueue_attendance_cancel",
 		"on_trash": "centhr.api.delete.attendance.enqueue_attendance_delete",
 	},
+	"Attendance Request": {
+		"before_insert": [
+			"centhr.api.otp.web_form.validate_web_form_otp",
+			"centhr.api.web_form.attendance_request.before_insert",
+		],
+		"after_insert": "centhr.api.web_form.attendance_request.after_insert",
+	},
 	"Leave Allocation": {
 		"after_insert": "centhr.api.post.leave_allocation.enqueue_leave_allocation_sync",
 		"on_update": "centhr.api.update.leave_allocation.enqueue_leave_allocation_update",
@@ -205,6 +219,39 @@ doc_events = {
 		"after_insert": "centhr.api.post.shift_type.enqueue_shift_type_sync",
 		"on_update": "centhr.api.update.shift_type.enqueue_shift_type_update",
 		"on_trash": "centhr.api.delete.shift_type.enqueue_shift_type_delete",
+	},
+	"Salary Component": {
+		"after_insert": "centhr.api.post.salary_component.enqueue_salary_component_sync",
+		"on_update": "centhr.api.update.salary_component.enqueue_salary_component_update",
+		"on_trash": "centhr.api.delete.salary_component.enqueue_salary_component_delete",
+	},
+	"Salary Structure": {
+		"after_insert": "centhr.api.post.salary_structure.enqueue_salary_structure_sync",
+		"on_update": "centhr.api.update.salary_structure.enqueue_salary_structure_update",
+		"on_cancel": "centhr.api.update.salary_structure.enqueue_salary_structure_update",
+		"on_update_after_submit": "centhr.api.update.salary_structure.enqueue_salary_structure_update",
+		"on_trash": "centhr.api.delete.salary_structure.enqueue_salary_structure_delete",
+	},
+	"Salary Structure Assignment": {
+		"after_insert": "centhr.api.post.salary_structure_assignment.enqueue_salary_structure_assignment_sync",
+		"on_update": "centhr.api.update.salary_structure_assignment.enqueue_salary_structure_assignment_update",
+		"on_cancel": "centhr.api.update.salary_structure_assignment.enqueue_salary_structure_assignment_update",
+		"on_update_after_submit": "centhr.api.update.salary_structure_assignment.enqueue_salary_structure_assignment_update",
+		"on_trash": "centhr.api.delete.salary_structure_assignment.enqueue_salary_structure_assignment_delete",
+	},
+	"Additional Salary": {
+		"after_insert": "centhr.api.post.additional_salary.enqueue_additional_salary_sync",
+		"on_update": "centhr.api.update.additional_salary.enqueue_additional_salary_update",
+		"on_cancel": "centhr.api.update.additional_salary.enqueue_additional_salary_update",
+		"on_update_after_submit": "centhr.api.update.additional_salary.enqueue_additional_salary_update",
+		"on_trash": "centhr.api.delete.additional_salary.enqueue_additional_salary_delete",
+	},
+	"Payroll Entry": {
+		"after_insert": "centhr.api.post.payroll_entry.enqueue_payroll_entry_sync",
+		"on_update": "centhr.api.update.payroll_entry.enqueue_payroll_entry_update",
+		"on_cancel": "centhr.api.update.payroll_entry.enqueue_payroll_entry_update",
+		"on_update_after_submit": "centhr.api.update.payroll_entry.enqueue_payroll_entry_update",
+		"on_trash": "centhr.api.delete.payroll_entry.enqueue_payroll_entry_delete",
 	},
 }
 
@@ -241,6 +288,10 @@ doc_events = {
 # extend_doctype_class = {
 # 	"Task": "centhr.custom.task.CustomTaskMixin"
 # }
+extend_doctype_class = {
+	"Leave Application": ["centhr.overrides.leave_application.CentHRLeaveApplication"],
+	"Attendance Request": ["centhr.overrides.attendance_request.CentHRAttendanceRequest"],
+}
 
 # Overriding Methods
 # ------------------------------

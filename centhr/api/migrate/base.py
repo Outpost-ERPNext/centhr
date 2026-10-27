@@ -16,6 +16,7 @@ from frappe.utils import cint, getdate, strip_html
 
 from centhr.api.migrate.client import RESPONSE_LOG_LIMIT, MigrationError, TargetClient
 from centhr.api.migrate.employee_map import EmployeeMap
+from centhr.api.migrate.tree_map import NAME_FIELDS, TreeMap
 
 LOGGER = "CentHR API Logger"
 CHUNK_SIZE = 1000
@@ -55,11 +56,13 @@ class Migrator:
 	cleared_fields: tuple[str, ...] = ()
 	title_field = "employee_name"
 	filter_by_company = True
+	order_by = "name asc"
 
 	def __init__(self, company: str):
 		self.company = company
 		self.client = TargetClient(company)
 		self.employees = EmployeeMap(self.client)
+		self.tree_map = TreeMap(self.client, company)
 		self.meta = frappe.get_meta(self.doctype)
 		self.remote = {}
 		self.notes = []
@@ -76,7 +79,9 @@ class Migrator:
 		if remote_filters is None:
 			return []
 
-		rows = self.client.get_all(self.doctype, remote_filters, list({"name", *self.list_fields}))
+		rows = self.client.get_all(
+			self.doctype, remote_filters, list({"name", *self.list_fields}), order_by=self.order_by
+		)
 		self.set_status(rows)
 		return rows
 
@@ -245,6 +250,8 @@ class Migrator:
 	def get_local_link(self, doctype: str, value: str) -> str | None:
 		if doctype == "Employee":
 			return self.employees.get_local(value)
+		if doctype in NAME_FIELDS:
+			return self.tree_map.get_local(doctype, value)
 		# Names match without regard to case, so take the exact name used on this site
 		return frappe.db.get_value(doctype, value, "name")
 

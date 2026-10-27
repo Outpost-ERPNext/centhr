@@ -236,7 +236,7 @@ const linkQueries = {
 /** Company-scoped masters, as in the ERPNext and HRMS Employee forms. */
 const linkFilters = {
 	department: (doc: Record<string, any>) => (doc.company ? { company: doc.company } : undefined),
-	cost_center: (doc: Record<string, any>) => (doc.company ? { company: doc.company, is_group: 0 } : undefined),
+	cost_center: (doc: Record<string, any>) => (doc.company ? { company: doc.company } : undefined),
 	payroll_cost_center: (doc: Record<string, any>) =>
 		doc.company ? { company: doc.company, is_group: 0 } : undefined,
 	user_id: () => ({ ignore_user_type: 1 }),

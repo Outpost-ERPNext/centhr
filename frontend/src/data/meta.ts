@@ -56,9 +56,12 @@ export const NO_VALUE_TYPES = [...LAYOUT_TYPES, "HTML", "Button", "Image", "Fold
 const cache = reactive<Record<string, DocTypeMeta>>({})
 const pending: Record<string, Promise<void>> = {}
 
-/** Loads a DocType's meta (with custom fields and property setters) and its child tables'. */
-export function loadMeta(doctype: string): Promise<void> {
-	if (cache[doctype]) return Promise.resolve()
+/**
+ * Loads a DocType's meta (with custom fields and property setters) and its child tables'.
+ * `refresh` fetches it again, so fields added or deleted since the last load show up.
+ */
+export function loadMeta(doctype: string, { refresh = false }: { refresh?: boolean } = {}): Promise<void> {
+	if (cache[doctype] && !refresh) return Promise.resolve()
 	if (!pending[doctype]) {
 		pending[doctype] = api<{ docs: DocTypeMeta[] }>("frappe.desk.form.load.getdoctype", { doctype })
 			.then((res) => {

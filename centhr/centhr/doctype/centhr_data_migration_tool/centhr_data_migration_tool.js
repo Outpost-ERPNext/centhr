@@ -8,6 +8,32 @@ const MIGRATION_METHOD =
 
 // Columns read from the CentHR site; `name` is the record name there
 centhr.migration.SECTIONS = {
+	// Listed in tree order, so parents are migrated before their children
+	account: {
+		doctype: "Account",
+		label: __("Account"),
+		filters: ["root_type"],
+		columns: [
+			["account_name", __("Account Name")],
+			["account_number", __("Account Number")],
+			["parent_account", __("Parent Account")],
+			["root_type", __("Root Type")],
+			["account_type", __("Account Type")],
+			["is_group", __("Is Group"), "Check"],
+		],
+	},
+	cost_center: {
+		doctype: "Cost Center",
+		label: __("Cost Center"),
+		filters: [],
+		columns: [
+			["cost_center_name", __("Cost Center Name")],
+			["cost_center_number", __("Cost Center Number")],
+			["parent_cost_center", __("Parent Cost Center")],
+			["is_group", __("Is Group"), "Check"],
+			["disabled", __("Disabled"), "Check"],
+		],
+	},
 	employee: {
 		doctype: "Employee",
 		label: __("Employee"),
@@ -30,6 +56,15 @@ centhr.migration.SECTIONS = {
 			["is_lwp", __("Leave Without Pay"), "Check"],
 			["is_carry_forward", __("Carry Forward"), "Check"],
 			["is_earned_leave", __("Earned Leave"), "Check"],
+		],
+	},
+	leave_policy: {
+		doctype: "Leave Policy",
+		label: __("Leave Policy"),
+		filters: [],
+		columns: [
+			["title", __("Title")],
+			["docstatus", __("Submitted"), "Check"],
 		],
 	},
 	leave_policy_assignment: {
@@ -81,6 +116,80 @@ centhr.migration.SECTIONS = {
 			["status", __("Status")],
 		],
 	},
+	salary_component: {
+		doctype: "Salary Component",
+		label: __("Salary Component"),
+		filters: [],
+		columns: [
+			["salary_component", __("Salary Component")],
+			["salary_component_abbr", __("Abbreviation")],
+			["type", __("Type")],
+			["disabled", __("Disabled"), "Check"],
+		],
+	},
+	salary_structure: {
+		doctype: "Salary Structure",
+		label: __("Salary Structure"),
+		filters: [],
+		columns: [
+			["is_active", __("Is Active")],
+			["payroll_frequency", __("Payroll Frequency")],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	salary_structure_assignment: {
+		doctype: "Salary Structure Assignment",
+		label: __("Salary Structure Assignment"),
+		filters: ["from_date", "to_date", "employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["salary_structure", __("Salary Structure")],
+			["from_date", __("From Date"), "Date"],
+			["base", __("Base"), "Currency"],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	additional_salary: {
+		doctype: "Additional Salary",
+		label: __("Additional Salary"),
+		filters: ["employee", "salary_component"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["salary_component", __("Salary Component")],
+			["amount", __("Amount"), "Currency"],
+			["payroll_date", __("Payroll Date"), "Date"],
+			["is_recurring", __("Recurring"), "Check"],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	salary_slip: {
+		doctype: "Salary Slip",
+		label: __("Salary Slip"),
+		filters: ["from_date", "to_date", "employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["start_date", __("Start Date"), "Date"],
+			["end_date", __("End Date"), "Date"],
+			["net_pay", __("Net Pay"), "Currency"],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	payroll_entry: {
+		doctype: "Payroll Entry",
+		label: __("Payroll Entry"),
+		filters: ["from_date", "to_date"],
+		columns: [
+			["posting_date", __("Posting Date"), "Date"],
+			["start_date", __("Start Date"), "Date"],
+			["end_date", __("End Date"), "Date"],
+			["payroll_frequency", __("Payroll Frequency")],
+			["number_of_employees", __("Employees"), "Int"],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
 };
 
 const form_events = {
@@ -95,6 +204,10 @@ const form_events = {
 		frappe.realtime.off("centhr_migration_progress");
 		frappe.realtime.on("centhr_migration_progress", (data) => {
 			frm.migration_tables[data.section]?.update_row(data);
+		});
+		frappe.realtime.off("centhr_migration_stopped");
+		frappe.realtime.on("centhr_migration_stopped", (data) => {
+			frm.migration_tables[data.section]?.on_stopped(data);
 		});
 	},
 
@@ -191,6 +304,8 @@ centhr.migration.MigrationTable = class MigrationTable {
 	reset() {
 		this.records = [];
 		this.datatable = null;
+		this.running = false;
+		this.stopping = false;
 		this.$table.empty();
 		this.$summary.html(
 			`<div class="text-muted">${__("Set the filters and click Fetch Details.")}</div>`
@@ -215,6 +330,8 @@ centhr.migration.MigrationTable = class MigrationTable {
 			})
 			.then((r) => {
 				this.records = r.message.records;
+				// a migration started earlier, e.g. before the page was reloaded, can still be stopped
+				this.running = r.message.running;
 				this.render();
 			});
 	}
@@ -265,16 +382,24 @@ centhr.migration.MigrationTable = class MigrationTable {
 					<b>${__("{0} records fetched", [this.records.length])}</b>
 					<span class="ml-2">${pills}</span>
 				</div>
-				<div>
-					<button class="btn btn-default btn-sm migrate-selected">${__("Migrate Selected")}</button>
-					<button class="btn btn-primary btn-sm migrate-pending">${__(
-						"Migrate Pending & Failed"
-					)}</button>
-				</div>
+				<div>${this.get_action_buttons()}</div>
 			</div>
 		`);
 		this.$summary.find(".migrate-selected").on("click", () => this.migrate_selected());
 		this.$summary.find(".migrate-pending").on("click", () => this.migrate_pending());
+		this.$summary.find(".stop-migration").on("click", () => this.stop());
+	}
+
+	get_action_buttons() {
+		if (this.running) {
+			return `<button class="btn btn-danger btn-sm stop-migration" ${this.stopping ? "disabled" : ""}>
+				${this.stopping ? __("Stopping...") : __("Stop Migration")}
+			</button>`;
+		}
+		return `
+			<button class="btn btn-default btn-sm migrate-selected">${__("Migrate Selected")}</button>
+			<button class="btn btn-primary btn-sm migrate-pending">${__("Migrate Pending & Failed")}</button>
+		`;
 	}
 
 	get_columns() {
@@ -327,7 +452,11 @@ centhr.migration.MigrationTable = class MigrationTable {
 	}
 
 	migrate_selected() {
-		const indexes = this.datatable.rowmanager.getCheckedRows().map(Number);
+		// In table order, so parents in a tree are migrated before their children
+		const indexes = this.datatable.rowmanager
+			.getCheckedRows()
+			.map(Number)
+			.sort((a, b) => a - b);
 		if (!indexes.length) {
 			frappe.throw(__("Select the records to migrate"));
 		}
@@ -366,6 +495,8 @@ centhr.migration.MigrationTable = class MigrationTable {
 						freeze: true,
 					})
 					.then(() => {
+						this.running = true;
+						this.stopping = false;
 						this.set_status(names, { migration_status: "Queued" });
 						frappe.show_alert({
 							message: __("Migration of {0} records started", [names.length]),
@@ -383,16 +514,62 @@ centhr.migration.MigrationTable = class MigrationTable {
 			local_name: data.local_name,
 		});
 
-		frappe.show_progress(
+		const dialog = frappe.show_progress(
 			__("Migrating {0}", [this.config.label]),
 			data.index,
 			data.total,
 			__("{0} of {1}", [data.index, data.total])
 		);
+		if (!this.stopping && !dialog.has_primary_action) {
+			dialog.set_primary_action(__("Stop Migration"), () => this.stop());
+			dialog.get_primary_btn().removeClass("btn-primary").addClass("btn-danger");
+		}
 		if (data.index === data.total) {
+			this.running = false;
+			this.stopping = false;
+			this.refresh_soon();
 			frappe.hide_progress();
 			frappe.show_alert({ message: __("{0} migration finished", [this.config.label]), indicator: "green" });
 		}
+	}
+
+	stop() {
+		frappe.confirm(
+			__(
+				"Stop the {0} migration? The record being migrated now still finishes, and the rest stay pending so you can migrate them later.",
+				[this.config.label]
+			),
+			() =>
+				frappe
+					.call({
+						method: `${MIGRATION_METHOD}.stop_migration`,
+						args: { section: this.section, company: this.frm.doc.company },
+					})
+					.then(() => {
+						this.stopping = true;
+						this.render_summary();
+						const dialog = frappe.cur_progress;
+						dialog?.get_primary_btn().prop("disabled", true).html(__("Stopping..."));
+						frappe.show_alert({
+							message: __("Stopping the {0} migration...", [this.config.label]),
+							indicator: "orange",
+						});
+					})
+		);
+	}
+
+	on_stopped(data) {
+		this.running = false;
+		this.stopping = false;
+		this.set_status(data.names, { migration_status: "Pending" });
+		frappe.hide_progress();
+		frappe.show_alert({
+			message: __("{0} migration stopped. {1} records were not migrated.", [
+				this.config.label,
+				data.names.length,
+			]),
+			indicator: "orange",
+		});
 	}
 
 	set_status(names, values) {

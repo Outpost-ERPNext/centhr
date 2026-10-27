@@ -10,6 +10,20 @@
   "company",
   "migration_order_section",
   "migration_order",
+  "account_tab",
+  "account_filters_section",
+  "account_root_type",
+  "account_column_break_fetch",
+  "account_fetch",
+  "account_records_section",
+  "account_summary",
+  "account_table",
+  "cost_center_tab",
+  "cost_center_filters_section",
+  "cost_center_fetch",
+  "cost_center_records_section",
+  "cost_center_summary",
+  "cost_center_table",
   "employee_tab",
   "employee_filters_section",
   "employee_status",
@@ -24,6 +38,12 @@
   "leave_type_records_section",
   "leave_type_summary",
   "leave_type_table",
+  "leave_policy_tab",
+  "leave_policy_filters_section",
+  "leave_policy_fetch",
+  "leave_policy_records_section",
+  "leave_policy_summary",
+  "leave_policy_table",
   "leave_policy_assignment_tab",
   "leave_policy_assignment_filters_section",
   "leave_policy_assignment_from_date",
@@ -70,7 +90,59 @@
   "attendance_fetch",
   "attendance_records_section",
   "attendance_summary",
-  "attendance_table"
+  "attendance_table",
+  "salary_component_tab",
+  "salary_component_filters_section",
+  "salary_component_fetch",
+  "salary_component_records_section",
+  "salary_component_summary",
+  "salary_component_table",
+  "salary_structure_tab",
+  "salary_structure_filters_section",
+  "salary_structure_fetch",
+  "salary_structure_records_section",
+  "salary_structure_summary",
+  "salary_structure_table",
+  "salary_structure_assignment_tab",
+  "salary_structure_assignment_filters_section",
+  "salary_structure_assignment_from_date",
+  "salary_structure_assignment_to_date",
+  "salary_structure_assignment_column_break_1",
+  "salary_structure_assignment_employee",
+  "salary_structure_assignment_column_break_fetch",
+  "salary_structure_assignment_fetch",
+  "salary_structure_assignment_records_section",
+  "salary_structure_assignment_summary",
+  "salary_structure_assignment_table",
+  "additional_salary_tab",
+  "additional_salary_filters_section",
+  "additional_salary_employee",
+  "additional_salary_salary_component",
+  "additional_salary_column_break_fetch",
+  "additional_salary_fetch",
+  "additional_salary_records_section",
+  "additional_salary_summary",
+  "additional_salary_table",
+  "salary_slip_tab",
+  "salary_slip_filters_section",
+  "salary_slip_from_date",
+  "salary_slip_to_date",
+  "salary_slip_column_break_1",
+  "salary_slip_employee",
+  "salary_slip_column_break_fetch",
+  "salary_slip_fetch",
+  "salary_slip_records_section",
+  "salary_slip_summary",
+  "salary_slip_table",
+  "payroll_entry_tab",
+  "payroll_entry_filters_section",
+  "payroll_entry_from_date",
+  "payroll_entry_to_date",
+  "payroll_entry_column_break_fetch",
+  "payroll_entry_fetch",
+  "payroll_entry_records_section",
+  "payroll_entry_summary",
+  "payroll_entry_table"
  ],
  "fields": [
   {
@@ -93,6 +165,77 @@
    "fieldname": "migration_order",
    "fieldtype": "HTML",
    "label": "Migration Order"
+  },
+  {
+   "fieldname": "account_tab",
+   "fieldtype": "Tab Break",
+   "label": "Account"
+  },
+  {
+   "fieldname": "account_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "default": "All",
+   "fieldname": "account_root_type",
+   "fieldtype": "Select",
+   "label": "Root Type",
+   "options": "All\nAsset\nLiability\nEquity\nIncome\nExpense"
+  },
+  {
+   "fieldname": "account_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "account_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "account_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "account_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "cost_center_tab",
+   "fieldtype": "Tab Break",
+   "label": "Cost Center"
+  },
+  {
+   "fieldname": "cost_center_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "cost_center_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "cost_center_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "cost_center_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "cost_center_table",
+   "fieldtype": "HTML",
+   "label": "Records"
   },
   {
    "fieldname": "employee_tab",
@@ -163,6 +306,37 @@
   },
   {
    "fieldname": "leave_type_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_policy_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leave Policy"
+  },
+  {
+   "fieldname": "leave_policy_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "description": "Leave Policy has no Company, so every Leave Policy of the connected site is fetched. Migrate its Leave Types first.",
+   "fieldname": "leave_policy_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "leave_policy_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "leave_policy_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "leave_policy_table",
    "fieldtype": "HTML",
    "label": "Records"
   },
@@ -401,13 +575,271 @@
    "fieldname": "attendance_table",
    "fieldtype": "HTML",
    "label": "Records"
+  },
+  {
+   "fieldname": "salary_component_tab",
+   "fieldtype": "Tab Break",
+   "label": "Salary Component"
+  },
+  {
+   "fieldname": "salary_component_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "salary_component_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "salary_component_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_component_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "salary_component_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_structure_tab",
+   "fieldtype": "Tab Break",
+   "label": "Salary Structure"
+  },
+  {
+   "fieldname": "salary_structure_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "salary_structure_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "salary_structure_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_structure_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "salary_structure_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_structure_assignment_tab",
+   "fieldtype": "Tab Break",
+   "label": "Salary Structure Assignment"
+  },
+  {
+   "fieldname": "salary_structure_assignment_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "salary_structure_assignment_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "salary_structure_assignment_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "salary_structure_assignment_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary_structure_assignment_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "salary_structure_assignment_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary_structure_assignment_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "salary_structure_assignment_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_structure_assignment_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "salary_structure_assignment_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "additional_salary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Additional Salary"
+  },
+  {
+   "fieldname": "additional_salary_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "additional_salary_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "additional_salary_salary_component",
+   "fieldtype": "Link",
+   "label": "Salary Component",
+   "options": "Salary Component"
+  },
+  {
+   "fieldname": "additional_salary_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "additional_salary_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "additional_salary_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "additional_salary_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "additional_salary_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_slip_tab",
+   "fieldtype": "Tab Break",
+   "label": "Salary Slip"
+  },
+  {
+   "fieldname": "salary_slip_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "salary_slip_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "salary_slip_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "salary_slip_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary_slip_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "salary_slip_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary_slip_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "salary_slip_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "salary_slip_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "salary_slip_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "payroll_entry_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payroll Entry"
+  },
+  {
+   "fieldname": "payroll_entry_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "payroll_entry_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "payroll_entry_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "payroll_entry_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payroll_entry_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "payroll_entry_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "payroll_entry_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "payroll_entry_table",
+   "fieldtype": "HTML",
+   "label": "Records"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-09 18:30:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "Centhr Data Migration Tool",

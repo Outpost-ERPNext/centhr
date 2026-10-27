@@ -24,13 +24,15 @@ class CenthrDataLog(Document):
 			},
 		)
 
-	def set_summary(self) -> None:
+	def set_summary(self, stopped: bool = False) -> None:
 		statuses = [row.status for row in self.records]
 		self.success_count = statuses.count("Success")
 		self.already_exists_count = statuses.count("Already Exists")
 		self.failed_count = statuses.count("Failed")
 
-		if not self.failed_count:
+		if stopped:
+			self.status = "Stopped"
+		elif not self.failed_count:
 			self.status = "Completed"
 		elif self.failed_count == len(statuses):
 			self.status = "Failed"

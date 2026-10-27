@@ -16,6 +16,13 @@ Flow: doc event (hooks.py) -> enqueue_* -> background job -> HTTP request
                      | on_trash -> delete
   Employee Checkin   after_insert -> post   | on_update -> update | on_trash -> delete
   Shift Type         after_insert -> post   | on_update -> update | on_trash -> delete
+  Salary Component   after_insert -> post   | on_update -> update | on_trash -> delete
+  Salary Structure, Salary Structure Assignment, Additional Salary,
+  Payroll Entry      after_insert -> post   | on_update, on_cancel, on_update_after_submit
+                     -> update | on_trash -> delete
+
+  The payroll doctypes are built like Employee (one self-contained file
+  per action, no common/ code). See section 10.
 
   Leave Allocation, Employee Checkin and Shift Type use the shared code in
   centhr/api/common/. See section 8.
@@ -245,3 +252,63 @@ centhr_api_logger.js / centhr_api_logger_list.js
     The token is deleted after commit, so a failed save can be fixed
     and sent again without a new code.
   Needs an outgoing Email Account.
+
+
+10. PAYROLL - centhr/api/post|update|delete/<doctype>.py
+--------------------------------------------------------
+  Salary Component, Salary Structure, Salary Structure Assignment,
+  Additional Salary and Payroll Entry. Same pattern as Employee
+  (section 2): CentHr Settings row of doc.company, token auth, "short"
+  queue after commit, one log per request, alert on failure. Resync
+  works from the log (sync_method / sync_kwargs).
+
+  Target endpoints:
+    GET    /api/resource/<DocType>?filters=...   find the record
+    POST   /api/resource/<DocType>               create
+    PUT    /api/resource/<DocType>/<name>        update, submit, cancel
+    DELETE /api/resource/<DocType>/<name>        delete
+
+  Record on the target found by:
+    Salary Component             name (no company: every target once)
+    Salary Structure             name (set by the user)
+    Salary Structure Assignment  employee + salary_structure + from_date
+    Additional Salary            employee + salary_component + amount +
+                                 payroll_date (from_date if recurring)
+    Payroll Entry                company + payroll_frequency + start_date
+                                 + end_date + posting_date
+  Employee: target employee with the same employee_number (or the local
+  name). Payroll Entry maps every row of its employees table.
+  Update jobs get the key values from before the save, so a changed draft
+  is still found.
+
+  post   Found = Success "already exists", nothing sent. Else POST with
+         the local docstatus.
+  update Not found = POST (cancelled locally = nothing to do).
+         Target draft = PUT all fields (docstatus 1 submits it there).
+         Target submitted = PUT docstatus 2 when cancelled locally, else
+         only "Allow on Submit" fields.
+  delete Not found = Success. Target submitted = PUT docstatus 2 first,
+         then DELETE. A submitted target record that belongs to a local
+         amendment is not touched.
+
+  Checked first, else Failed "... Sync it first":
+    Salary Structure    every salary component exists on the target
+    Salary Structure Assignment  structure is submitted on the target
+    Additional Salary   salary component exists on the target
+
+  Not sent (local-only links, or set by the target):
+    Salary Component    accounts
+    Salary Structure    letter_head, mode_of_payment, payment_account,
+                        additional_salary in earning/deduction rows
+    Salary Structure Assignment  amended_from, payroll_payable_account,
+                        payroll_cost_centers
+    Additional Salary   amended_from, ref_doctype, ref_docname
+    Payroll Entry       amended_from, branch, department, designation,
+                        grade, project, bank_account, status,
+                        salary_slips_created, salary_slips_submitted,
+                        error_message; department/designation of rows
+
+  Payroll Entry: the sync only submits it on the target when it was
+  submitted here. The target's own on_submit then creates DRAFT Salary
+  Slips. Salary Slips are never submitted by the sync. The target's own
+  cancel removes them.

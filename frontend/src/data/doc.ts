@@ -104,8 +104,8 @@ export const addComment = (doctype: string, name: string, content: string) =>
 const writeFieldsCache: Record<string, Promise<string[]>> = {}
 
 /** Fields the session user may write, after field-level (permlevel) permissions. */
-export function getWritableFields(doctype: string): Promise<string[]> {
-	if (!writeFieldsCache[doctype]) {
+export function getWritableFields(doctype: string, { refresh = false }: { refresh?: boolean } = {}): Promise<string[]> {
+	if (!writeFieldsCache[doctype] || refresh) {
 		writeFieldsCache[doctype] = api<string[]>("hrms.api.get_permitted_fields_for_write", { doctype }).catch(
 			() => []
 		)

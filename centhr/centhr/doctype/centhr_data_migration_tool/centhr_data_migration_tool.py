@@ -7,26 +7,45 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime
 from frappe.utils.background_jobs import is_job_enqueued
 
+from centhr.api.migrate.account import AccountMigrator
+from centhr.api.migrate.additional_salary import AdditionalSalaryMigrator
 from centhr.api.migrate.attendance import AttendanceMigrator
 from centhr.api.migrate.base import get_error_message
 from centhr.api.migrate.client import MigrationError
+from centhr.api.migrate.cost_center import CostCenterMigrator
 from centhr.api.migrate.employee import EmployeeMigrator
 from centhr.api.migrate.leave_allocation import LeaveAllocationMigrator
 from centhr.api.migrate.leave_application import LeaveApplicationMigrator
+from centhr.api.migrate.leave_policy import LeavePolicyMigrator
 from centhr.api.migrate.leave_policy_assignment import LeavePolicyAssignmentMigrator
 from centhr.api.migrate.leave_type import LeaveTypeMigrator
+from centhr.api.migrate.payroll_entry import PayrollEntryMigrator
+from centhr.api.migrate.salary_component import SalaryComponentMigrator
+from centhr.api.migrate.salary_slip import SalarySlipMigrator
+from centhr.api.migrate.salary_structure import SalaryStructureMigrator
+from centhr.api.migrate.salary_structure_assignment import SalaryStructureAssignmentMigrator
 
 TOOL = "Centhr Data Migration Tool"
 DATA_LOG = "Centhr Data Log"
 RUN_JOB = "centhr.centhr.doctype.centhr_data_migration_tool.centhr_data_migration_tool.run_migration"
 PROGRESS_EVENT = "centhr_migration_progress"
+STOPPED_EVENT = "centhr_migration_stopped"
 MIGRATORS = {
+	"account": AccountMigrator,
+	"cost_center": CostCenterMigrator,
 	"employee": EmployeeMigrator,
 	"leave_type": LeaveTypeMigrator,
+	"leave_policy": LeavePolicyMigrator,
 	"leave_policy_assignment": LeavePolicyAssignmentMigrator,
 	"leave_allocation": LeaveAllocationMigrator,
 	"leave_application": LeaveApplicationMigrator,
 	"attendance": AttendanceMigrator,
+	"salary_component": SalaryComponentMigrator,
+	"salary_structure": SalaryStructureMigrator,
+	"salary_structure_assignment": SalaryStructureAssignmentMigrator,
+	"additional_salary": AdditionalSalaryMigrator,
+	"salary_slip": SalarySlipMigrator,
+	"payroll_entry": PayrollEntryMigrator,
 }
 
 
@@ -48,7 +67,11 @@ def get_records(section: str, company: str, filters: str | dict | None = None) -
 			title=_("Fetch Failed"),
 		)
 
-	return {"records": records, "count": len(records)}
+	return {
+		"records": records,
+		"count": len(records),
+		"running": is_job_enqueued(get_job_id(section, company)),
+	}
 
 
 @frappe.whitelist()
@@ -60,7 +83,7 @@ def migrate_records(section: str, company: str, names: str | list) -> int:
 	if not names:
 		frappe.throw(_("Select at least one record to migrate"))
 
-	job_id = f"centhr_migration::{section}::{company}"
+	job_id = get_job_id(section, company)
 	if is_job_enqueued(job_id):
 		frappe.throw(
 			_("A migration of these records is already running. Wait for it to finish."),
@@ -77,6 +100,8 @@ def migrate_records(section: str, company: str, names: str | list) -> int:
 		}
 	).insert(ignore_permissions=True)
 
+	# A stop requested for an earlier run must not end this one
+	frappe.cache.delete_value(get_stop_key(job_id))
 	# The job reads the data log, so it must start after the log is committed
 	frappe.enqueue(
 		RUN_JOB,
@@ -93,27 +118,58 @@ def migrate_records(section: str, company: str, names: str | list) -> int:
 	return len(names)
 
 
+@frappe.whitelist()
+def stop_migration(section: str, company: str) -> None:
+	get_migrator_class(section, company)
+	job_id = get_job_id(section, company)
+	if not is_job_enqueued(job_id):
+		frappe.throw(_("No migration of these records is running"), title=_("Not Running"))
+
+	# The job checks this between records, so the record being migrated still finishes
+	frappe.cache.set_value(get_stop_key(job_id), 1, expires_in_sec=60 * 60 * 4)
+
+
 def run_migration(section: str, company: str, names: list[str], data_log: str) -> None:
 	data_log = start_data_log(data_log)
+	stop_key = get_stop_key(get_job_id(section, company))
+	stopped = False
 
 	try:
-		migrate_each(section, company, names, data_log)
+		stopped = not migrate_each(section, company, names, data_log, stop_key)
 	except Exception as e:
 		frappe.db.rollback()
 		data_log.reload()
-		fail_remaining(data_log, names, e)
+		add_remaining(data_log, names, frappe._dict(status="Failed", error=get_error_message(e)))
 		raise
 	finally:
-		data_log.set_summary()
+		if stopped:
+			add_remaining(data_log, names, frappe._dict(status="Stopped"))
+		data_log.set_summary(stopped)
 		data_log.completed_on = now_datetime()
 		data_log.save(ignore_permissions=True)
 		frappe.db.commit()
+		frappe.cache.delete_value(stop_key)
+
+	if stopped:
+		frappe.publish_realtime(
+			STOPPED_EVENT,
+			{
+				"section": section,
+				"names": [row.reference_name for row in data_log.records if row.status == "Stopped"],
+				"data_log": data_log.name,
+			},
+			user=frappe.session.user,
+		)
 
 
-def migrate_each(section: str, company: str, names: list[str], data_log) -> None:
+def migrate_each(section: str, company: str, names: list[str], data_log, stop_key: str) -> bool:
+	"""Migrate the records one by one. Return False when a stop was requested before the last one."""
 	migrator = MIGRATORS[section](company)
 
 	for index, name in enumerate(names, start=1):
+		if frappe.cache.get_value(stop_key, expires=True, use_local_cache=False):
+			return False
+
 		result = migrator.migrate(name)
 		data_log.add_record(name, result, migrator.remote.get(migrator.title_field))
 		data_log.save(ignore_permissions=True)
@@ -134,6 +190,7 @@ def migrate_each(section: str, company: str, names: list[str], data_log) -> None
 			},
 			user=frappe.session.user,
 		)
+	return True
 
 
 def start_data_log(name: str):
@@ -145,13 +202,20 @@ def start_data_log(name: str):
 	return data_log
 
 
-def fail_remaining(data_log, names: list[str], error: Exception) -> None:
+def add_remaining(data_log, names: list[str], result: frappe._dict) -> None:
 	"""Record the records that the run did not reach, so the log accounts for every selected record."""
 	done = {row.reference_name for row in data_log.records}
-	result = frappe._dict(status="Failed", error=get_error_message(error))
 	for name in names:
 		if name not in done:
 			data_log.add_record(name, result)
+
+
+def get_job_id(section: str, company: str) -> str:
+	return f"centhr_migration::{section}::{company}"
+
+
+def get_stop_key(job_id: str) -> str:
+	return f"{job_id}::stop"
 
 
 def get_migrator_class(section: str, company: str):

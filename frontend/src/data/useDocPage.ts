@@ -61,8 +61,9 @@ export function useDocPage(doctype: string, name: string | null | undefined, opt
 		loading.value = true
 		notFound.value = null
 		try {
-			await loadMeta(doctype)
-			writableFields.value = await getWritableFields(doctype)
+			// Fresh on every page open, so fields added or deleted in Desk show without a hard reload
+			await loadMeta(doctype, { refresh: true })
+			writableFields.value = await getWritableFields(doctype, { refresh: true })
 			if (isNew) {
 				doc.value = newDoc(doctype, options.defaults?.() || {})
 				permissions.value = can(doctype)

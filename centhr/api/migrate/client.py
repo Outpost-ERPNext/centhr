@@ -39,7 +39,7 @@ class TargetClient:
 		}
 		self.session = get_session()
 
-	def get_all(self, doctype: str, filters: list, fields: list) -> list[dict]:
+	def get_all(self, doctype: str, filters: list, fields: list, order_by: str = "name asc") -> list[dict]:
 		"""Read every matching record, one page at a time."""
 		records = []
 		while True:
@@ -49,7 +49,7 @@ class TargetClient:
 				params={
 					"filters": json.dumps(filters),
 					"fields": json.dumps(fields),
-					"order_by": "name asc",
+					"order_by": order_by,
 					"limit_start": len(records),
 					"limit_page_length": PAGE_LENGTH,
 				},
