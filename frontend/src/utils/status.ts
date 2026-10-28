@@ -11,6 +11,8 @@ const TONES: Record<string, Record<string, Tone>> = {
 		"Half Day": "amber",
 	},
 	"Employee Checkin": { IN: "green", OUT: "blue" },
+	"Payroll Entry": { Queued: "amber", Failed: "red" },
+	"Salary Slip": { Withheld: "amber" },
 	docstatus: { Draft: "gray", Submitted: "blue", Cancelled: "red", Expired: "gray" },
 }
 

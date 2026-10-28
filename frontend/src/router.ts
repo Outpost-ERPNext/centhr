@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Employee Checkin", "Shift Type", "Shift Assignment"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Employee Checkin", "Shift Type", "Shift Assignment", "Salary Structure Assignment", "Payroll Entry", "Salary Slip"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -66,6 +66,25 @@ const routes: RouteRecordRaw[] = [
 				"ShiftType",
 				() => import("@/pages/shifts/ShiftTypeList.vue"),
 				() => import("@/pages/shifts/ShiftTypeDetail.vue")
+			),
+			...docRoutes(
+				"salary-structure-assignments",
+				"SalaryStructureAssignment",
+				() => import("@/pages/salary-structure-assignments/SalaryStructureAssignmentList.vue"),
+				() => import("@/pages/salary-structure-assignments/SalaryStructureAssignmentDetail.vue")
+			),
+			{ path: "payroll-processing", redirect: { name: "PayrollEntryList" } },
+			...docRoutes(
+				"payroll-processing/payroll-entries",
+				"PayrollEntry",
+				() => import("@/pages/payroll-processing/PayrollEntryList.vue"),
+				() => import("@/pages/payroll-processing/PayrollEntryDetail.vue")
+			),
+			...docRoutes(
+				"payroll-processing/salary-slips",
+				"SalarySlip",
+				() => import("@/pages/payroll-processing/SalarySlipList.vue"),
+				() => import("@/pages/payroll-processing/SalarySlipDetail.vue")
 			),
 		] as RouteRecordRaw[],
 	},

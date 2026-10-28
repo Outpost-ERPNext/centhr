@@ -7,6 +7,9 @@ const ROUTES: Record<string, string> = {
 	Attendance: "/attendance",
 	"Employee Checkin": "/checkins",
 	"Shift Type": "/shifts",
+	"Salary Structure Assignment": "/salary-structure-assignments",
+	"Payroll Entry": "/payroll-processing/payroll-entries",
+	"Salary Slip": "/payroll-processing/salary-slips",
 }
 
 export function routeFor(doctype: string | undefined, name: string | null | undefined): string | null {

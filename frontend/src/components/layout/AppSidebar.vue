@@ -27,15 +27,43 @@
 				collapsible
 				class="mt-2"
 			>
-				<SidebarItem
-					v-for="item in group.items"
-					:key="item.route"
-					:label="item.label"
-					:icon="item.icon"
-					:route="item.route"
-					:active="route.path === item.route || route.path.startsWith(item.route + '/')"
-					@click="$emit('navigate')"
-				/>
+				<template v-for="item in group.items" :key="item.label">
+					<template v-if="item.children">
+						<SidebarItem
+							:label="item.label"
+							:icon="item.icon"
+							:aria-expanded="!closedGroups[item.label]"
+							@click="closedGroups[item.label] = !closedGroups[item.label]"
+						>
+							<template #suffix>
+								<span
+									class="lucide-chevron-right mr-1.5 size-4 text-ink-gray-5 transition-transform"
+									:class="{ 'rotate-90': !closedGroups[item.label] }"
+								/>
+							</template>
+						</SidebarItem>
+						<!-- Icon-only sidebar has no room to indent or collapse, so it lists the children flat -->
+						<div v-show="collapsed || !closedGroups[item.label]" class="flex flex-col gap-0.5" :class="{ 'pl-4': !collapsed }">
+							<SidebarItem
+								v-for="child in item.children"
+								:key="child.route"
+								:label="child.label"
+								:icon="child.icon"
+								:route="child.route"
+								:active="isActive(child.route)"
+								@click="$emit('navigate')"
+							/>
+						</div>
+					</template>
+					<SidebarItem
+						v-else
+						:label="item.label"
+						:icon="item.icon"
+						:route="item.route"
+						:active="isActive(item.route)"
+						@click="$emit('navigate')"
+					/>
+				</template>
 			</SidebarSection>
 		</div>
 
@@ -66,7 +94,22 @@ defineEmits<{ navigate: [] }>()
 const route = useRoute()
 const { resolvedColorScheme, setColorScheme } = useColorScheme()
 
-const groups = [
+interface NavLink {
+	label: string
+	icon: string
+	route: string
+	doctype: string
+}
+interface NavItem {
+	label: string
+	icon: string
+	route?: string
+	doctype?: string
+	/** A sub-menu inside the group, expanded and collapsed in place. */
+	children?: NavLink[]
+}
+
+const groups: { label: string; items: NavItem[] }[] = [
 	{
 		label: "Employee Master",
 		items: [
@@ -84,14 +127,42 @@ const groups = [
 			{ label: "Leave Application", icon: "lucide-file-text", route: "/leave-applications", doctype: "Leave Application" },
 		],
 	},
+	{
+		label: "Payroll",
+		items: [
+			{
+				label: "Salary Structure Assignment",
+				icon: "lucide-wallet",
+				route: "/salary-structure-assignments",
+				doctype: "Salary Structure Assignment",
+			},
+			{
+				label: "Payroll Processing",
+				icon: "lucide-banknote",
+				children: [
+					{ label: "Payroll Entry", icon: "lucide-calculator", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
+					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
+				],
+			},
+		],
+	},
 ]
 
 // Only modules the user can read; the server checks again on every request
 const visibleGroups = computed(() =>
 	groups
-		.map((g) => ({ ...g, items: g.items.filter((item) => can(item.doctype).read) }))
+		.map((g) => ({
+			...g,
+			items: g.items
+				.map((item) => (item.children ? { ...item, children: item.children.filter((c) => can(c.doctype).read) } : item))
+				.filter((item) => (item.children ? item.children.length : can(item.doctype!).read)),
+		}))
 		.filter((g) => g.items.length)
 )
+
+function isActive(path: string | undefined) {
+	return !!path && (route.path === path || route.path.startsWith(path + "/"))
+}
 
 // Collapsed by default on tablets, as in the design; the user's choice is remembered
 const tablet = window.innerWidth >= 768 && window.innerWidth < 1100
