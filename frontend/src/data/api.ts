@@ -34,7 +34,7 @@ export function errorMessage(error: unknown): string {
 	return err?.message ? stripHtml(err.message) : "Something went wrong"
 }
 
-function stripHtml(value: string) {
+export function stripHtml(value: string) {
 	const div = document.createElement("div")
 	div.innerHTML = String(value)
 	return (div.textContent || "").trim()

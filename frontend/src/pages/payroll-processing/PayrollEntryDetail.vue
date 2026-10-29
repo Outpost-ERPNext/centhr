@@ -31,7 +31,7 @@
 					v-if="page.doc.value.salary_slips_created && can('Salary Slip').read"
 					icon-left="lucide-receipt"
 					label="Salary slips"
-					:route="{ name: 'SalarySlipList', query: { payroll_entry: page.doc.value.name } }"
+					:route="{ name: 'SalarySlipList', query: { company: page.doc.value.company, from: page.doc.value.start_date, to: page.doc.value.end_date } }"
 				/>
 			</DocActions>
 		</template>
@@ -101,9 +101,10 @@ import DocActions from "@/components/DocActions.vue"
 import DocPageShell from "@/components/DocPageShell.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import SummaryCard from "@/components/SummaryCard.vue"
-import { api } from "@/data/api"
+import { api, stripHtml } from "@/data/api"
 import { getList } from "@/data/list"
 import { cycleLabel } from "@/data/payroll"
+import { runPayrollStep } from "@/data/payrollRun"
 import { can } from "@/data/permissions"
 import { useDocPage } from "@/data/useDocPage"
 import { formatCurrency, formatDateShort, formatNumber, today } from "@/utils/format"
@@ -208,12 +209,6 @@ const notice = computed(() => {
 	return null
 })
 
-function stripHtml(value: string) {
-	const div = document.createElement("div")
-	div.innerHTML = value
-	return (div.textContent || "").trim()
-}
-
 /** Changing who or when the payroll covers makes the fetched employee list stale. */
 function clearEmployees() {
 	page.doc.value.employees = []
@@ -307,7 +302,7 @@ function submitSlips() {
 		onConfirm: async () => {
 			acting.value = "submit-slips"
 			try {
-				await api("run_doc_method", { dt: "Payroll Entry", dn: page.doc.value.name, method: "submit_salary_slips" })
+				await runPayrollStep(page.doc.value.name, "submit_slips")
 				toast.success("Salary slips submitted")
 				await page.reload()
 			} finally {

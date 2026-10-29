@@ -84,7 +84,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { Button, Dialog, ErrorMessage, LoadingIndicator, toast } from "frappe-ui"
 import StatusBadge from "@/components/StatusBadge.vue"
-import { api, errorMessage } from "@/data/api"
+import { api, errorMessage, stripHtml } from "@/data/api"
 import { insertDoc } from "@/data/doc"
 import { formatNumber } from "@/utils/format"
 import type { Tone } from "@/utils/status"
@@ -270,11 +270,5 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 	} catch {
 		return fallback
 	}
-}
-
-function stripHtml(value: string) {
-	const div = document.createElement("div")
-	div.innerHTML = String(value)
-	return (div.textContent || "").trim()
 }
 </script>
