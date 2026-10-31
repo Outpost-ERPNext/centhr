@@ -54,13 +54,22 @@
 							>
 								<template v-for="field in column" :key="field.fieldname">
 									<template v-if="fieldVisible(field)">
+										<div v-if="field.fieldtype === 'Button'" class="flex items-end">
+											<Button
+												:label="field.label"
+												:loading="buttons![field.fieldname].loading"
+												:disabled="readOnly || buttons![field.fieldname].disabled"
+												@click="buttons![field.fieldname].onClick()"
+											/>
+										</div>
 										<ChildTable
-											v-if="field.fieldtype === 'Table' || field.fieldtype === 'Table MultiSelect'"
+											v-else-if="field.fieldtype === 'Table' || field.fieldtype === 'Table MultiSelect'"
 											class="md:col-span-2"
-											v-model="doc[field.fieldname]"
+											:model-value="doc[field.fieldname]"
 											:field="field"
 											:read-only="fieldReadOnly(field)"
 											:required="required(field)"
+											@update:model-value="(v) => setValue(field.fieldname, v)"
 										/>
 										<FieldControl
 											v-else
@@ -73,6 +82,7 @@
 											:error="errors?.[field.fieldname]"
 											:link-filters="linkFilters?.[field.fieldname]?.(doc)"
 											:link-query="linkQueries?.[field.fieldname]"
+											:options="fieldOptions?.[field.fieldname]"
 											@update:model-value="(v) => setValue(field.fieldname, v)"
 										/>
 									</template>
@@ -88,11 +98,18 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
+import { Button } from "frappe-ui"
 import { needsPromptName } from "@/data/doc"
 import { getLayout, NO_VALUE_TYPES, type DocField, type LayoutSection } from "@/data/meta"
 import { evaluateDependsOn, isReadOnly, isRequired } from "@/utils/dependsOn"
 import ChildTable from "./fields/ChildTable.vue"
 import FieldControl from "./fields/FieldControl.vue"
+
+export interface FormButton {
+	onClick: () => void
+	loading?: boolean
+	disabled?: boolean
+}
 
 const props = defineProps<{
 	doctype: string
@@ -111,6 +128,10 @@ const props = defineProps<{
 	readOnlyFields?: string[]
 	/** Label of the name input for DocTypes the user names ("prompt"). */
 	nameLabel?: string
+	/** Choices of Autocomplete fields, like `set_data` in a Desk form script. */
+	fieldOptions?: Record<string, { label: string; value: string }[]>
+	/** Handlers for Button fields; a Button field without one is left out, as it does nothing here. */
+	buttons?: Record<string, FormButton>
 }>()
 const emit = defineEmits<{ change: [fieldname: string, value: any] }>()
 
@@ -135,7 +156,9 @@ watch(
 )
 
 function fieldVisible(field: DocField) {
-	if (NO_VALUE_TYPES.includes(field.fieldtype)) return false
+	if (field.fieldtype === "Button" ? !props.buttons?.[field.fieldname] : NO_VALUE_TYPES.includes(field.fieldtype)) {
+		return false
+	}
 	if (field.hidden || props.hiddenFields?.includes(field.fieldname)) return false
 	return evaluateDependsOn(field.depends_on, props.doc)
 }

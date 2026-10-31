@@ -13,34 +13,69 @@
 						<th v-for="col in columns" :key="col.fieldname" class="px-2 py-1.5 font-normal">
 							{{ col.label }}
 						</th>
-						<th v-if="!readOnly" class="w-10" />
+						<th class="w-20" />
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="(row, index) in rows" :key="row.name || index" class="border-t border-ch-line align-top">
-						<td class="px-2 py-1.5 text-ch-ink-3">{{ index + 1 }}</td>
-						<td v-for="col in columns" :key="col.fieldname" class="px-1 py-1">
-							<span v-if="readOnly || col.read_only" class="block px-1 py-1">
-								{{ displayValue(row[col.fieldname], col.fieldtype) }}
-							</span>
-							<FieldControl
-								v-else
-								:field="{ ...col, label: '' }"
-								:model-value="row[col.fieldname]"
-								:doc="row"
-								:doctype="childDoctype"
-								@update:model-value="(v) => setCell(index, col.fieldname, v)"
-							/>
-						</td>
-						<td v-if="!readOnly" class="px-1 py-1">
-							<Button
-								variant="ghost"
-								icon="lucide-trash-2"
-								aria-label="Delete row"
-								@click="removeRow(index)"
-							/>
-						</td>
-					</tr>
+					<template v-for="(row, index) in rows" :key="row.name || index">
+						<tr class="border-t border-ch-line align-top">
+							<td class="px-2 py-1.5 text-ch-ink-3">{{ index + 1 }}</td>
+							<td v-for="col in columns" :key="col.fieldname" class="px-1 py-1">
+								<span v-if="readOnly || col.read_only" class="block px-1 py-1">
+									{{ cellText(row, col) }}
+								</span>
+								<FieldControl
+									v-else
+									:field="{ ...col, label: '' }"
+									:model-value="row[col.fieldname]"
+									:doc="row"
+									:doctype="childDoctype"
+									compact
+									@update:model-value="(v) => setCell(index, col.fieldname, v)"
+								/>
+							</td>
+							<td class="px-1 py-1">
+								<div class="flex justify-end gap-0.5">
+									<Button
+										v-if="moreFields.length"
+										variant="ghost"
+										:icon="expanded.has(index) ? 'lucide-chevron-up' : 'lucide-chevron-down'"
+										:aria-label="expanded.has(index) ? 'Hide row details' : 'Show row details'"
+										:aria-expanded="expanded.has(index)"
+										@click="toggle(index)"
+									/>
+									<Button
+										v-if="!readOnly"
+										variant="ghost"
+										icon="lucide-trash-2"
+										aria-label="Delete row"
+										@click="removeRow(index)"
+									/>
+								</div>
+							</td>
+						</tr>
+						<!-- The row's other fields, like the row form of a Desk grid -->
+						<tr v-if="expanded.has(index)" class="bg-ch-subtle">
+							<td :colspan="columns.length + 2" class="px-3 py-3">
+								<div class="grid grid-cols-1 gap-x-5 gap-y-3 md:grid-cols-3">
+									<template v-for="f in moreFields" :key="f.fieldname">
+										<div v-if="readOnly || f.read_only" class="flex flex-col gap-1">
+											<span class="text-xs text-ch-ink-3">{{ f.label }}</span>
+											<span class="text-ch-ink">{{ cellText(row, f) || "—" }}</span>
+										</div>
+										<FieldControl
+											v-else
+											:field="f"
+											:model-value="row[f.fieldname]"
+											:doc="row"
+											:doctype="childDoctype"
+											@update:model-value="(v) => setCell(index, f.fieldname, v)"
+										/>
+									</template>
+								</div>
+							</td>
+						</tr>
+					</template>
 					<tr v-if="!rows.length">
 						<td :colspan="columns.length + 2" class="px-2 py-4 text-center text-ch-ink-3">No rows</td>
 					</tr>
@@ -54,8 +89,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, reactive } from "vue"
 import { Button } from "frappe-ui"
+import { stripHtml } from "@/data/api"
 import { getMeta, NO_VALUE_TYPES, type DocField } from "@/data/meta"
 import { displayValue } from "@/utils/format"
 import FieldControl from "./FieldControl.vue"
@@ -66,13 +102,26 @@ const emit = defineEmits<{ "update:modelValue": [rows: Record<string, any>[]] }>
 const childDoctype = computed(() => props.field.options || "")
 const rows = computed(() => props.modelValue || [])
 
+const fields = computed(() =>
+	(getMeta(childDoctype.value)?.fields || []).filter((f) => !NO_VALUE_TYPES.includes(f.fieldtype) && !f.hidden)
+)
 const columns = computed(() => {
-	const fields = (getMeta(childDoctype.value)?.fields || []).filter(
-		(f) => !NO_VALUE_TYPES.includes(f.fieldtype) && !f.hidden
-	)
-	const listed = fields.filter((f) => f.in_list_view)
-	return (listed.length ? listed : fields).slice(0, 6)
+	const listed = fields.value.filter((f) => f.in_list_view)
+	return (listed.length ? listed : fields.value).slice(0, 6)
 })
+/** Fields that have no column, shown when a row is expanded. */
+const moreFields = computed(() => fields.value.filter((f) => !columns.value.includes(f)))
+
+const expanded = reactive(new Set<number>())
+function toggle(index: number) {
+	if (expanded.has(index)) expanded.delete(index)
+	else expanded.add(index)
+}
+
+function cellText(row: Record<string, any>, field: DocField) {
+	const value = row[field.fieldname]
+	return typeof value === "string" && /<[a-z]/i.test(value) ? stripHtml(value) : displayValue(value, field.fieldtype)
+}
 
 function setCell(index: number, fieldname: string, value: any) {
 	const next = rows.value.map((row, i) => (i === index ? { ...row, [fieldname]: value } : row))
@@ -88,6 +137,8 @@ function addRow() {
 }
 
 function removeRow(index: number) {
+	// Row numbers shift, so the expanded rows would point at other rows
+	expanded.clear()
 	emit(
 		"update:modelValue",
 		rows.value.filter((_, i) => i !== index)

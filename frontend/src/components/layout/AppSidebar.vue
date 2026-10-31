@@ -116,12 +116,29 @@ const groups: { label: string; items: NavItem[] }[] = [
 			{ label: "Employees", icon: "lucide-users", route: "/employees", doctype: "Employee" },
 			{ label: "Leave Allocation", icon: "lucide-calendar-plus", route: "/leave-allocations", doctype: "Leave Allocation" },
 			{ label: "Shift", icon: "lucide-timer", route: "/shifts", doctype: "Shift Type" },
+			{ label: "Shift Assignment", icon: "lucide-calendar-clock", route: "/shift-assignments", doctype: "Shift Assignment" },
+			{ label: "Shift Assignment Tool", icon: "lucide-users-round", route: "/shift-assignment-tool", doctype: "Shift Assignment Tool" },
+			{ label: "Holiday List", icon: "lucide-calendar-off", route: "/holiday-lists", doctype: "Holiday List" },
+		],
+	},
+	{
+		label: "Organization",
+		items: [
+			{ label: "Department", icon: "lucide-building-2", route: "/departments", doctype: "Department" },
+			{ label: "Grade", icon: "lucide-award", route: "/grades", doctype: "Employee Grade" },
+			{ label: "Designation", icon: "lucide-briefcase", route: "/designations", doctype: "Designation" },
 		],
 	},
 	{
 		label: "Attendance & Leaves",
 		items: [
 			{ label: "Attendance", icon: "lucide-clock", route: "/attendance", doctype: "Attendance" },
+			{
+				label: "Attendance Request",
+				icon: "lucide-calendar-plus",
+				route: "/attendance-requests",
+				doctype: "Attendance Request",
+			},
 			{ label: "Employee Checkin", icon: "lucide-fingerprint", route: "/checkins", doctype: "Employee Checkin" },
 			{ label: "Leave Type", icon: "lucide-tags", route: "/leave-types", doctype: "Leave Type" },
 			{ label: "Leave Application", icon: "lucide-file-text", route: "/leave-applications", doctype: "Leave Application" },

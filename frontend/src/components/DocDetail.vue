@@ -24,7 +24,7 @@
 									<tbody>
 										<tr v-for="row in doc[field.fieldname]" :key="row.name" class="border-t border-ch-line">
 											<td v-for="col in childColumns(field)" :key="col.fieldname" class="py-1 pr-3">
-												{{ displayValue(row[col.fieldname], col.fieldtype) }}
+												{{ cellText(row, col) }}
 											</td>
 										</tr>
 									</tbody>
@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { getMeta, NO_VALUE_TYPES, type DocField, type LayoutTab } from "@/data/meta"
+import { stripHtml } from "@/data/api"
 import { evaluateDependsOn } from "@/utils/dependsOn"
 import { displayValue } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
@@ -92,6 +93,12 @@ const sections = computed(() =>
 function display(field: DocField) {
 	const currency = field.fieldtype === "Currency" && field.options ? props.doc[field.options] : null
 	return displayValue(props.doc[field.fieldname], field.fieldtype, currency)
+}
+
+// Text Editor cells hold HTML; the table shows their text
+function cellText(row: Record<string, any>, col: DocField) {
+	const value = row[col.fieldname]
+	return typeof value === "string" && /<[a-z]/i.test(value) ? stripHtml(value) : displayValue(value, col.fieldtype)
 }
 
 function childColumns(field: DocField) {

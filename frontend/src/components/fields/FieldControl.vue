@@ -24,6 +24,31 @@
 		@update:model-value="update"
 	/>
 
+	<Combobox
+		v-else-if="field.fieldtype === 'Autocomplete'"
+		class="w-full"
+		:model-value="modelValue || null"
+		:options="autocompleteOptions"
+		:label="field.label"
+		:placeholder="field.label ? `Select ${field.label}` : ''"
+		:required="required"
+		:disabled="readOnly"
+		:error="error"
+		size="md"
+		open-on-focus
+		@update:model-value="(v: any) => update(v ?? '')"
+	>
+		<template v-if="modelValue && !readOnly" #suffix>
+			<button
+				type="button"
+				class="lucide-x size-3.5 text-ch-ink-3 hover:text-ch-ink"
+				aria-label="Clear"
+				@click.stop="update('')"
+				@pointerdown.stop
+			/>
+		</template>
+	</Combobox>
+
 	<Select
 		v-else-if="field.fieldtype === 'Select'"
 		:model-value="modelValue ?? ''"
@@ -63,7 +88,7 @@
 	/>
 
 	<Textarea
-		v-else-if="TEXT_TYPES.includes(field.fieldtype)"
+		v-else-if="TEXT_TYPES.includes(field.fieldtype) && !compact"
 		:model-value="modelValue ?? ''"
 		:label="field.label"
 		:required="required"
@@ -85,7 +110,7 @@
 
 	<TextInput
 		v-else
-		:model-value="modelValue ?? ''"
+		:model-value="inputValue"
 		:type="inputType"
 		:label="field.label"
 		:required="required"
@@ -99,7 +124,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue"
-import { Checkbox, DatePicker, DateTimePicker, Select, Textarea, TextInput } from "frappe-ui"
+import { Checkbox, Combobox, DatePicker, DateTimePicker, Select, Textarea, TextInput } from "frappe-ui"
+import { stripHtml } from "@/data/api"
 import type { DocField } from "@/data/meta"
 import { pickerDateFormat } from "@/utils/format"
 import LinkField from "./LinkField.vue"
@@ -118,6 +144,10 @@ const props = defineProps<{
 	/** Filters for Link fields, keyed by fieldname. */
 	linkFilters?: Record<string, any>
 	linkQuery?: string
+	/** Choices of an Autocomplete field set by the page, like `set_data` in a Desk form script. */
+	options?: { label: string; value: string }[]
+	/** One line for text fields, for table cells. */
+	compact?: boolean
 }>()
 const emit = defineEmits<{ "update:modelValue": [value: any] }>()
 
@@ -128,6 +158,26 @@ const linkDoctype = computed(() =>
 const selectOptions = computed(() =>
 	(props.field.options || "").split("\n").map((o) => ({ label: o || "—", value: o }))
 )
+
+const autocompleteOptions = computed(() => {
+	const options =
+		props.options ||
+		(props.field.options || "")
+			.split("\n")
+			.filter(Boolean)
+			.map((o) => ({ label: o, value: o }))
+	// Keep the current value selectable, so it shows before the choices load
+	if (props.modelValue && !options.some((o) => o.value === props.modelValue)) {
+		return [{ label: String(props.modelValue), value: String(props.modelValue) }, ...options]
+	}
+	return options
+})
+
+// A compact text cell shows Text Editor HTML as plain text
+const inputValue = computed(() => {
+	const value = props.modelValue ?? ""
+	return props.compact && TEXT_TYPES.includes(props.field.fieldtype) && /<[a-z]/i.test(value) ? stripHtml(value) : value
+})
 
 const inputType = computed(() => {
 	if (NUMBER_TYPES.includes(props.field.fieldtype)) return "number"

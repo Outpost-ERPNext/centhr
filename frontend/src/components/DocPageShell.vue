@@ -51,6 +51,8 @@
 						:required-fields="requiredFields"
 						:read-only-fields="readOnlyFields"
 						:name-label="nameLabel"
+						:field-options="fieldOptions"
+						:buttons="buttons"
 						@change="(f, v) => $emit('change', f, v)"
 					/>
 					<template v-else>
@@ -115,7 +117,7 @@ import PageHeader from "./layout/PageHeader.vue"
 import ActivityPanel from "./ActivityPanel.vue"
 import DocActions from "./DocActions.vue"
 import DocDetail from "./DocDetail.vue"
-import DocForm from "./DocForm.vue"
+import DocForm, { type FormButton } from "./DocForm.vue"
 import StatusBadge from "./StatusBadge.vue"
 import { getLayout, NO_VALUE_TYPES, type LayoutTab } from "@/data/meta"
 import type { useDocPage } from "@/data/useDocPage"
@@ -135,6 +137,10 @@ const props = defineProps<{
 	readOnlyFields?: string[]
 	/** Label of the name input for DocTypes the user names ("prompt"). */
 	nameLabel?: string
+	/** Choices of Autocomplete fields in the form. */
+	fieldOptions?: Record<string, { label: string; value: string }[]>
+	/** Handlers for the DocType's Button fields in the form. */
+	buttons?: Record<string, FormButton>
 	/** Show every field in the read view, including empty ones. */
 	showEmpty?: boolean
 	/** Extra read-only tabs, inserted after the given tab name (or appended). */

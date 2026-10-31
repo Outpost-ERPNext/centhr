@@ -12,6 +12,9 @@
 			<span v-if="pendingCount" class="text-[13px] text-ch-ink-3">
 				Pending leave: <span class="tabular-nums text-ch-ink">{{ pendingCount }}</span>
 			</span>
+			<span v-if="requestCount" class="text-[13px] text-ch-ink-3">
+				Pending requests: <span class="tabular-nums text-ch-ink">{{ requestCount }}</span>
+			</span>
 			<Button
 				v-if="canMark && picked.length"
 				class="ml-auto"
@@ -21,9 +24,41 @@
 			/>
 		</div>
 
+		<!-- Which employees to list: everyone, or those with pending leave (PLA) or pending attendance requests (ARR) -->
+		<div class="flex flex-wrap items-center gap-2 px-5 pb-3">
+			<EmployeeSearch
+				v-model="employeeId"
+				placeholder="Employee name or ID"
+				:company="company"
+				active-only
+				@select="(e) => (pickedEmployee = e)"
+			/>
+			<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Show employees">
+				<button
+					v-for="chip in pendingChips"
+					:key="chip.value"
+					type="button"
+					class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px]"
+					:class="pendingFilter === chip.value ? 'border-ch-ink text-ch-ink' : 'border-ch-line text-ch-ink-2 hover:border-ch-line-2'"
+					:aria-pressed="pendingFilter === chip.value"
+					@click="pendingFilter = chip.value"
+				>
+					<span
+						v-if="chip.code"
+						class="inline-flex h-4 min-w-6 items-center justify-center rounded-[4px] px-1 text-[10px] font-semibold"
+						:style="chip.style"
+					>{{ chip.code }}</span>
+					{{ chip.label }}
+					<span v-if="chip.count !== null" class="tabular-nums text-ch-ink-3">{{ chip.count }}</span>
+				</button>
+			</div>
+		</div>
+
 		<div class="min-h-0 flex-1 overflow-auto px-5 pb-4">
 			<div v-if="loading && !employees.length" class="py-16 text-center text-sm text-ch-ink-3">Loading…</div>
-			<div v-else-if="!employees.length" class="py-16 text-center text-sm text-ch-ink-3">No active employees.</div>
+			<div v-else-if="!employees.length" class="py-16 text-center text-sm text-ch-ink-3">
+				{{ pendingFilter ? "No employees with pending leave or attendance requests in this period." : "No active employees." }}
+			</div>
 			<table v-else class="border-separate border-spacing-0 text-[12.5px]">
 				<thead>
 					<tr>
@@ -80,10 +115,22 @@
 								:to="`/attendance/${encodeURIComponent(cell(emp.name, d)!.name)}`"
 								class="inline-flex h-5 min-w-7 items-center justify-center rounded-[5px] px-1 text-[10.5px] font-semibold"
 								:class="cell(emp.name, d)!.docstatus === 0 ? 'outline outline-1 outline-dashed' : ''"
-								:style="asPending(emp.name, d) ? pendingStyle : chipStyle(cell(emp.name, d)!.status)"
+								:style="
+									asPending(emp.name, d)
+										? pendingStyle
+										: asRequest(emp.name, d)
+											? requestStyle
+											: chipStyle(cell(emp.name, d)!.status)
+								"
 								:title="recordTitle(emp.name, d)"
 							>
-								{{ asPending(emp.name, d) ? PENDING_LEAVE.code : ATTENDANCE_CODES[cell(emp.name, d)!.status] || "?" }}
+								{{
+									asPending(emp.name, d)
+										? PENDING_LEAVE.code
+										: asRequest(emp.name, d)
+											? PENDING_REQUEST.code
+											: ATTENDANCE_CODES[cell(emp.name, d)!.status] || "?"
+								}}
 							</RouterLink>
 							<RouterLink
 								v-else-if="asPending(emp.name, d)"
@@ -93,6 +140,15 @@
 								:title="pendingTitle(asPending(emp.name, d)!)"
 							>
 								{{ PENDING_LEAVE.code }}
+							</RouterLink>
+							<RouterLink
+								v-else-if="asRequest(emp.name, d)"
+								:to="`/attendance-requests/${encodeURIComponent(asRequest(emp.name, d)!.name)}`"
+								class="inline-flex h-5 min-w-7 items-center justify-center rounded-[5px] px-1 text-[10.5px] font-semibold"
+								:style="requestStyle"
+								:title="requestTitle(asRequest(emp.name, d)!)"
+							>
+								{{ PENDING_REQUEST.code }}
 							</RouterLink>
 							<span v-else-if="isHoliday(emp.name, d)" class="text-[10.5px] text-ch-ink-4">H</span>
 							<span v-else-if="d <= todayDate && emp.date_of_joining <= d" class="text-ch-ink-4">·</span>
@@ -120,6 +176,13 @@
 				>{{ PENDING_LEAVE.code }}</span>
 				{{ PENDING_LEAVE.label }}
 			</span>
+			<span class="flex items-center gap-1.5">
+				<span
+					class="inline-flex h-4 min-w-6 items-center justify-center rounded-[4px] px-1 text-[10px] font-semibold"
+					:style="requestStyle"
+				>{{ PENDING_REQUEST.code }}</span>
+				{{ PENDING_REQUEST.label }}
+			</span>
 			<span class="flex items-center gap-1.5"><span class="flex h-4 w-6 items-center justify-center rounded-[4px] bg-ch-weekend text-[10px]">H</span> Holiday or weekly off</span>
 			<Pager v-model:page="page" v-model:page-size="pageSize" :total="employeeTotal" class="ml-auto !border-0 !p-0" />
 		</div>
@@ -129,6 +192,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { Button, Checkbox } from "frappe-ui"
+import EmployeeSearch from "@/components/EmployeeSearch.vue"
 import LinkField from "@/components/fields/LinkField.vue"
 import PayrollCycleNav from "@/components/PayrollCycleNav.vue"
 import Pager from "@/components/Pager.vue"
@@ -137,7 +201,8 @@ import { getCount, getList, type Filter } from "@/data/list"
 import { addDays, parseDate, today, weekday } from "@/utils/format"
 import { readStorage, writeStorage } from "@/utils/storage"
 import { getPendingLeaves, type PendingLeave } from "@/data/leave"
-import { ATTENDANCE_CODES, ATTENDANCE_SUMMARY_STATUSES, PENDING_LEAVE, toneFor } from "@/utils/status"
+import { getEmployeesWithPending, getPendingRequests, type PendingRequest } from "@/data/attendanceRequest"
+import { ATTENDANCE_CODES, ATTENDANCE_SUMMARY_STATUSES, PENDING_LEAVE, PENDING_REQUEST, toneFor } from "@/utils/status"
 
 defineProps<{ canMark: boolean }>()
 defineEmits<{ mark: [employees: string[], range: { from: string; to: string; company: string | null }] }>()
@@ -147,6 +212,15 @@ const todayDate = today()
 // Each company has its own payroll period, so the register shows one company at a time
 const company = ref<string | null>(readStorage("centhr-register-company", "") || null)
 const department = ref<string | null>(null)
+const employeeId = ref("")
+/** The suggestion picked in the search box; the register then shows that employee only. */
+const pickedEmployee = ref("")
+/** Only employees with pending leave (PLA), a pending attendance request (ARR), or either, in the period. */
+const pendingFilter = ref<"" | "leave" | "request">(
+	(["leave", "request"] as const).find((v) => v === readStorage("centhr-register-pending", "")) || ""
+)
+/** Employees of the company with pending leave / requests in the period, for the chips and the filter. */
+const pendingEmployees = ref<{ leave: string[]; request: string[] }>({ leave: [], request: [] })
 const fromDate = ref("")
 const toDate = ref("")
 const page = ref(1)
@@ -160,6 +234,8 @@ const picked = ref<string[]>([])
 const holidays = ref<Record<string, Record<string, boolean>>>({})
 /** Leave applied for but not approved yet, per `employee|date`. */
 const pendingLeaves = ref<Record<string, PendingLeave>>({})
+/** Attendance Requests not submitted yet, per `employee|date`. */
+const pendingRequests = ref<Record<string, PendingRequest>>({})
 
 const isHoliday = (employee: string, date: string) => date in (holidays.value[employee] || {})
 const offForAll = (date: string) =>
@@ -193,7 +269,44 @@ function asPending(employee: string, date: string): PendingLeave | null {
 	return isHoliday(employee, date) ? null : leave
 }
 
+const pendingChips = computed(() => [
+	{ value: "" as const, label: "All employees", code: "", style: {}, count: null },
+	{
+		value: "leave" as const,
+		label: "Pending leave",
+		code: PENDING_LEAVE.code,
+		style: pendingStyle,
+		count: pendingEmployees.value.leave.length,
+	},
+	{
+		value: "request" as const,
+		label: "Pending attendance request",
+		code: PENDING_REQUEST.code,
+		style: requestStyle,
+		count: pendingEmployees.value.request.length,
+	},
+])
+
 const pendingStyle = { background: `var(--ch-${PENDING_LEAVE.tone}-bg)`, color: `var(--ch-${PENDING_LEAVE.tone}-ink)` }
+
+/**
+ * The draft Attendance Request to show as ARR on this day, the way HRMS would apply it on submission:
+ * not on a day with leave (shown as PLA), not on a holiday unless the request includes holidays,
+ * and over an Absent record, which the request overwrites.
+ */
+function asRequest(employee: string, date: string): PendingRequest | null {
+	const request = pendingRequests.value[`${employee}|${date}`]
+	if (!request || asPending(employee, date)) return null
+	const record = cell(employee, date)
+	if (record) return record.status === "Absent" ? request : null
+	return isHoliday(employee, date) && !request.include_holidays ? null : request
+}
+
+const requestStyle = { background: `var(--ch-${PENDING_REQUEST.tone}-bg)`, color: `var(--ch-${PENDING_REQUEST.tone}-ink)` }
+
+function requestTitle(request: PendingRequest) {
+	return `${PENDING_REQUEST.label}: ${request.name} (${request.reason}${request.half_day ? ", half day" : ""})`
+}
 
 function pendingTitle(leave: PendingLeave) {
 	return `${PENDING_LEAVE.label}: ${leave.name} (${leave.leave_type}${leave.half_day ? ", half day" : ""})`
@@ -203,11 +316,16 @@ function recordTitle(employee: string, date: string) {
 	const record = cell(employee, date)!
 	const draft = record.docstatus === 0 ? " (draft)" : ""
 	const leave = asPending(employee, date)
-	return leave ? `${record.status} recorded${draft} · ${pendingTitle(leave)}` : `${record.status}${draft}`
+	if (leave) return `${record.status} recorded${draft} · ${pendingTitle(leave)}`
+	const request = asRequest(employee, date)
+	if (request) return `${record.status} recorded${draft} · ${requestTitle(request)}`
+	return `${record.status}${draft}`
 }
 
 function total(employee: string, statuses: string[]) {
-	return dates.value.filter((d) => statuses.includes(cell(employee, d)?.status || "") && !asPending(employee, d)).length
+	return dates.value.filter(
+		(d) => statuses.includes(cell(employee, d)?.status || "") && !asPending(employee, d) && !asRequest(employee, d)
+	).length
 }
 
 const unmarked = computed(() => {
@@ -219,11 +337,18 @@ const unmarked = computed(() => {
 				emp.date_of_joining <= d &&
 				!isHoliday(emp.name, d) &&
 				!cell(emp.name, d) &&
-				!pendingLeaves.value[`${emp.name}|${d}`]
+				!pendingLeaves.value[`${emp.name}|${d}`] &&
+				!pendingRequests.value[`${emp.name}|${d}`]
 			)
 				count++
 		}
 	}
+	return count
+})
+
+const requestCount = computed(() => {
+	let count = 0
+	for (const emp of employees.value) for (const d of dates.value) if (asRequest(emp.name, d)) count++
 	return count
 })
 
@@ -247,19 +372,43 @@ async function load() {
 		const empFilters: Filter[] = [["status", "=", "Active"]]
 		if (company.value) empFilters.push(["company", "=", company.value])
 		if (department.value) empFilters.push(["department", "=", department.value])
+		// Name, ID or Employee Number (the CentHR ID of many employees), within the company above
+		const like = `%${employeeId.value}%`
+		const exact = !!employeeId.value && employeeId.value === pickedEmployee.value
+		if (exact) empFilters.push(["name", "=", employeeId.value])
+		const empOrFilters: Filter[] = employeeId.value && !exact
+			? [
+					["employee_name", "like", like],
+					["name", "like", like],
+					["employee_number", "like", like],
+				]
+			: []
+		// Only this month, so the register stays light
+		const range = [dates.value[0], dates.value[dates.value.length - 1]]
+		const period = { from: range[0], to: range[1], company: company.value }
+		const [leave, request] = await Promise.all([
+			getEmployeesWithPending("leave", period),
+			getEmployeesWithPending("request", period),
+		])
+		if (id !== requestId) return
+		pendingEmployees.value = { leave, request }
+		if (pendingFilter.value) {
+			const names = pendingEmployees.value[pendingFilter.value]
+			empFilters.push(["name", "in", names.length ? names : [""]])
+		}
 		const [emps, count] = await Promise.all([
 			getList<{ name: string; employee_name: string; date_of_joining: string }>({
 				doctype: "Employee",
 				fields: ["name", "employee_name", "date_of_joining"],
 				filters: empFilters,
+				or_filters: empOrFilters,
 				order_by: "employee_name asc",
 				start: (page.value - 1) * pageSize.value,
 				limit: pageSize.value,
 			}),
-			getCount("Employee", empFilters),
+			getCount("Employee", empFilters, empOrFilters),
 		])
-		// Only this page of employees and this month, so the register stays light
-		const range = [dates.value[0], dates.value[dates.value.length - 1]]
+		// Only this page of employees
 		const holidayRequest = emps.length
 			? api<Record<string, Record<string, boolean>>>(
 					"centhr.api.attendance.get_holidays_for_employees",
@@ -268,6 +417,11 @@ async function load() {
 				).catch(() => ({}))
 			: Promise.resolve({})
 		const pendingRequest = getPendingLeaves(
+			emps.map((e) => e.name),
+			range[0],
+			range[1]
+		)
+		const attendanceRequests = getPendingRequests(
 			emps.map((e) => e.name),
 			range[0],
 			range[1]
@@ -284,10 +438,11 @@ async function load() {
 					limit: 0,
 				})
 			: []
-		const [holidayMap, pendingMap] = await Promise.all([holidayRequest, pendingRequest])
+		const [holidayMap, pendingMap, requestMap] = await Promise.all([holidayRequest, pendingRequest, attendanceRequests])
 		if (id !== requestId) return
 		holidays.value = holidayMap
 		pendingLeaves.value = pendingMap
+		pendingRequests.value = requestMap
 		employees.value = emps
 		employeeTotal.value = count
 		records.value = Object.fromEntries(rows.map((r) => [`${r.employee}|${r.attendance_date}`, r]))
@@ -297,7 +452,8 @@ async function load() {
 	}
 }
 
-watch([company, department, pageSize], () => {
+watch(pendingFilter, (v) => writeStorage("centhr-register-pending", v || ""))
+watch([company, department, employeeId, pendingFilter, pageSize], () => {
 	if (page.value !== 1) page.value = 1
 	else load()
 })

@@ -38,6 +38,24 @@
 						<span v-else>{{ col.label }}</span>
 					</div>
 				</div>
+				<!-- A search box per column, like the inline filters of a Desk datatable -->
+				<div
+					v-if="inlineFilters"
+					class="sticky top-8 z-[1] grid items-center gap-3 border-b border-ch-line bg-ch-surface px-3 py-1.5"
+					:style="gridStyle"
+					role="row"
+				>
+					<div v-if="selectable" />
+					<input
+						v-for="col in columns"
+						:key="col.key"
+						:value="columnFilters[col.key] || ''"
+						type="search"
+						:aria-label="`Filter ${col.label}`"
+						class="h-7 w-full min-w-0 rounded-3 border-0 bg-ch-subtle px-2 text-[13px] text-ch-ink placeholder:text-ch-ink-4 focus:ring-2 focus:ring-[var(--ch-line-2)]"
+						@input="setColumnFilter(col.key, ($event.target as HTMLInputElement).value)"
+					/>
+				</div>
 
 				<div v-if="loading && !rows.length" class="flex flex-col">
 					<div v-for="n in 6" :key="n" class="flex h-12 items-center border-b border-ch-line px-3">
@@ -154,6 +172,8 @@ const props = withDefaults(
 		minWidth?: string
 		/** Column shown on the right of a stacked mobile row, usually the status. */
 		mobileAside?: string
+		/** A search box under each column header; the page filters the rows by `columnFilters`. */
+		inlineFilters?: boolean
 	}>(),
 	{
 		rowKey: "name",
@@ -165,6 +185,11 @@ const props = withDefaults(
 )
 
 const selected = defineModel<string[]>("selected", { default: () => [] })
+const columnFilters = defineModel<Record<string, string>>("columnFilters", { default: () => ({}) })
+
+function setColumnFilter(key: string, value: string) {
+	columnFilters.value = { ...columnFilters.value, [key]: value }
+}
 defineEmits<{ sort: [key: string]; "row-click": [row: Record<string, any>]; "clear-filters": [] }>()
 
 const gridStyle = computed(() => ({

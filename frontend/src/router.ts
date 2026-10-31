@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Employee Checkin", "Shift Type", "Shift Assignment", "Salary Structure Assignment", "Payroll Entry", "Salary Slip"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
 				() => import("@/pages/attendance/AttendanceDetail.vue")
 			),
 			...docRoutes(
+				"attendance-requests",
+				"AttendanceRequest",
+				() => import("@/pages/attendance-requests/AttendanceRequestList.vue"),
+				() => import("@/pages/attendance-requests/AttendanceRequestDetail.vue")
+			),
+			...docRoutes(
 				"checkins",
 				"EmployeeCheckin",
 				() => import("@/pages/checkins/EmployeeCheckinList.vue"),
@@ -68,11 +74,46 @@ const routes: RouteRecordRaw[] = [
 				() => import("@/pages/shifts/ShiftTypeDetail.vue")
 			),
 			...docRoutes(
+				"shift-assignments",
+				"ShiftAssignment",
+				() => import("@/pages/shift-assignments/ShiftAssignmentList.vue"),
+				() => import("@/pages/shift-assignments/ShiftAssignmentDetail.vue")
+			),
+			...docRoutes(
+				"holiday-lists",
+				"HolidayList",
+				() => import("@/pages/holiday-lists/HolidayListList.vue"),
+				() => import("@/pages/holiday-lists/HolidayListDetail.vue")
+			),
+			...docRoutes(
+				"departments",
+				"Department",
+				() => import("@/pages/departments/DepartmentList.vue"),
+				() => import("@/pages/departments/DepartmentDetail.vue")
+			),
+			...docRoutes(
+				"grades",
+				"EmployeeGrade",
+				() => import("@/pages/grades/EmployeeGradeList.vue"),
+				() => import("@/pages/grades/EmployeeGradeDetail.vue")
+			),
+			...docRoutes(
+				"designations",
+				"Designation",
+				() => import("@/pages/designations/DesignationList.vue"),
+				() => import("@/pages/designations/DesignationDetail.vue")
+			),
+			...docRoutes(
 				"salary-structure-assignments",
 				"SalaryStructureAssignment",
 				() => import("@/pages/salary-structure-assignments/SalaryStructureAssignmentList.vue"),
 				() => import("@/pages/salary-structure-assignments/SalaryStructureAssignmentDetail.vue")
 			),
+			{
+				path: "shift-assignment-tool",
+				name: "ShiftAssignmentTool",
+				component: () => import("@/pages/shift-assignment-tool/ShiftAssignmentTool.vue"),
+			},
 			{ path: "payroll-processing", redirect: { name: "PayrollEntryList" } },
 			...docRoutes(
 				"payroll-processing/payroll-entries",

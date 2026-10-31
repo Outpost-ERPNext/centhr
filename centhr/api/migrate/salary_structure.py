@@ -1,8 +1,11 @@
 # Copyright (c) 2026, Outpost Work LLP and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
 from frappe import _
+from hrms.payroll.utils import COMPONENT_PARENTFIELDS
 
 from centhr.api.migrate.base import CHUNK_SIZE, LOGGER, SAVEPOINT, Migrator
 from centhr.api.migrate.client import MigrationError
@@ -21,6 +24,31 @@ class SalaryStructureMigrator(Migrator):
 	# Matched through get_local_structures instead
 	duplicate_fields = ()
 	title_field = "name"
+
+	def prepare(self, remote: dict) -> dict:
+		values = super().prepare(remote)
+		self.clear_double_payment_days(values)
+		return values
+
+	def clear_double_payment_days(self, values: dict) -> None:
+		"""Older CentHR sites allow a formula row to depend on payment days even when its formula already
+		uses a payment-days-based component. That reduces the amount twice and HRMS rejects the structure
+		(see SalaryStructure.validate_payment_days_based_dependent_component), so clear the flag on such rows.
+		"""
+		rows = [row for table in COMPONENT_PARENTFIELDS for row in values.get(table) or []]
+		abbreviations = [row["abbr"] for row in rows if row.get("depends_on_payment_days") and row.get("abbr")]
+		for row in rows:
+			formula = row.get("formula")
+			if (
+				formula
+				and row.get("depends_on_payment_days")
+				and any(re.search(r"\b" + re.escape(abbr) + r"\b", formula) for abbr in abbreviations)
+			):
+				row["depends_on_payment_days"] = 0
+				message = _(
+					"Depends On Payment Days cleared for {0}, its formula already uses a payment-days-based component"
+				)
+				self.notes.append(message.format(row.get("salary_component")))
 
 	def get_existing_names(self, rows: list[dict]) -> dict[str, str]:
 		return get_local_structures(self.company, [row["name"] for row in rows])

@@ -1,4 +1,4 @@
-import { reactive } from "vue"
+import { reactive, ref } from "vue"
 import { api } from "./api"
 
 export interface Permissions {
@@ -37,6 +37,17 @@ export function getReadableFields(doctype: string): Promise<string[]> {
 		)
 	}
 	return readableCache[doctype]
+}
+
+/**
+ * Field-level read check for a list page. `ready` resolves once the fields are known; until
+ * then every field counts as readable, so the columns do not flicker.
+ */
+export function useReadableFields(doctype: string) {
+	const fields = ref<string[]>([])
+	const ready = getReadableFields(doctype).then((f) => (fields.value = f))
+	const readable = (field: string) => !fields.value.length || fields.value.includes(field)
+	return { ready, readable }
 }
 
 /** Permissions for one document, after user permissions and sharing are applied. */

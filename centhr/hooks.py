@@ -99,10 +99,12 @@ website_route_rules = [
 after_install = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
+	"centhr.customization.payroll_entry.create_custom_fields",
 ]
 after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
+	"centhr.customization.payroll_entry.create_custom_fields",
 ]
 
 # Uninstallation
@@ -211,7 +213,10 @@ doc_events = {
 	},
 	"Employee Checkin": {
 		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",
-		"after_insert": "centhr.api.post.employee_checkin.enqueue_employee_checkin_sync",
+		"after_insert": [
+			"centhr.api.post.employee_checkin.enqueue_employee_checkin_sync",
+			"centhr.api.employee_checkin_attendance.mark_attendance_from_checkin",
+		],
 		"on_update": "centhr.api.update.employee_checkin.enqueue_employee_checkin_update",
 		"on_trash": "centhr.api.delete.employee_checkin.enqueue_employee_checkin_delete",
 	},

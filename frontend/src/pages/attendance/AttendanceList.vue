@@ -2,6 +2,13 @@
 	<PageHeader :crumbs="[{ label: 'Attendance' }]">
 		<template #actions>
 			<Button
+				v-if="can('Attendance Request').read"
+				icon-left="lucide-calendar-plus"
+				label="Requests"
+				class="hidden sm:inline-flex"
+				:route="{ name: 'AttendanceRequestList', query: list.state.filters.employee ? { employee: list.state.filters.employee } : {} }"
+			/>
+			<Button
 				v-if="can('Attendance').create"
 				icon-left="lucide-calendar-check"
 				label="Mark attendance"
@@ -38,6 +45,23 @@
 				{{ s }}
 				<span class="tabular-nums text-ch-ink-3">{{ statusCounts[s] || 0 }}</span>
 			</button>
+			<!-- Attendance of employees with pending leave (PLA) or a pending attendance request (ARR) -->
+			<span class="mx-1 h-4 w-px bg-ch-line" aria-hidden="true" />
+			<button
+				v-for="p in PENDING_CHIPS"
+				:key="p.value"
+				class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px]"
+				:class="list.state.filters.pending === p.value ? 'border-ch-ink text-ch-ink' : 'border-ch-line text-ch-ink-2 hover:border-ch-line-2'"
+				:aria-pressed="list.state.filters.pending === p.value"
+				:title="`Attendance of employees with ${p.label.toLowerCase()} in the date range`"
+				@click="list.state.filters.pending = list.state.filters.pending === p.value ? '' : p.value"
+			>
+				<span
+					class="inline-flex h-4 min-w-6 items-center justify-center rounded-[4px] px-1 text-[10px] font-semibold"
+					:style="{ background: `var(--ch-${p.tone}-bg)`, color: `var(--ch-${p.tone}-ink)` }"
+				>{{ p.code }}</span>
+				{{ p.label }}
+			</button>
 		</div>
 	</div>
 
@@ -50,7 +74,18 @@
 			noun="record"
 			@clear="list.clearFilters"
 		>
-			<FilterLink v-model="list.state.filters.employee" doctype="Employee" placeholder="Employee" />
+			<EmployeeSearch
+				v-model="list.state.filters.employee_id"
+				placeholder="Employee name or ID"
+				:company="list.state.filters.company"
+				@select="pickEmployee"
+			/>
+			<FilterLink
+				v-model="list.state.filters.employee"
+				doctype="Employee"
+				placeholder="Employee"
+				:filters="list.state.filters.company ? { company: list.state.filters.company } : undefined"
+			/>
 			<FilterLink v-model="list.state.filters.company" doctype="Company" placeholder="Company" />
 			<FilterLink v-model="list.state.filters.department" doctype="Department" placeholder="Department" />
 			<FilterSelect
@@ -150,6 +185,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { Button, toast } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
+import EmployeeSearch from "@/components/EmployeeSearch.vue"
 import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
 import FilterSelect from "@/components/FilterSelect.vue"
@@ -162,12 +198,13 @@ import StatusBadge from "@/components/StatusBadge.vue"
 import AttendanceRegister from "./AttendanceRegister.vue"
 import MarkAttendanceDialog from "./MarkAttendanceDialog.vue"
 import { api } from "@/data/api"
-import { dateFilter, getGroupCounts, useDocList, type Filter, type ListState } from "@/data/list"
+import { dateFilter, getGroupCounts, getList, useDocList, type Filter, type ListState } from "@/data/list"
 import { loadMeta, selectOptions } from "@/data/meta"
 import { can } from "@/data/permissions"
 import { formatDate } from "@/utils/format"
 import { getPendingLeaves, type PendingLeave } from "@/data/leave"
-import { ATTENDANCE_SUMMARY_STATUSES, PENDING_LEAVE, docstatusLabel, toneFor } from "@/utils/status"
+import { ATTENDANCE_SUMMARY_STATUSES, PENDING_LEAVE, PENDING_REQUEST, docstatusLabel, toneFor } from "@/utils/status"
+import { getEmployeesWithPending } from "@/data/attendanceRequest"
 import { readStorage, writeStorage } from "@/utils/storage"
 
 const router = useRouter()
@@ -177,12 +214,26 @@ loadMeta("Attendance")
 const view = ref(route.query.view === "register" ? "register" : readStorage("centhr-attendance-view", "records"))
 watch(view, (v) => writeStorage("centhr-attendance-view", v))
 
+const PENDING_CHIPS = [
+	{ value: "leave", label: "Pending leave", code: PENDING_LEAVE.code, tone: PENDING_LEAVE.tone },
+	{ value: "request", label: "Pending attendance request", code: PENDING_REQUEST.code, tone: PENDING_REQUEST.tone },
+]
+
 const statusOptions = computed(() =>
 	selectOptions("Attendance", "status").filter((s) => ATTENDANCE_SUMMARY_STATUSES.includes(s))
 )
 
-function baseFilters(state: ListState): Filter[] {
+async function baseFilters(state: ListState): Promise<Filter[]> {
 	const filters: Filter[] = []
+	if (state.filters.pending === "leave" || state.filters.pending === "request") {
+		// Pending items that overlap the date filter, or any pending item when there is none
+		const { date_op: op, date_from: dateFrom, date_to: dateTo } = state.filters
+		const from = op && op !== "<=" ? dateFrom : undefined
+		const to = op === "between" ? dateTo : op === "=" || op === "<=" ? dateFrom : undefined
+		const names = await getEmployeesWithPending(state.filters.pending, { from, to, company: state.filters.company })
+		filters.push(["employee", "in", names.length ? names : [""]])
+	}
+	if (state.filters.employee_id) filters.push(["employee", "in", await findEmployees(state.filters.employee_id, state.filters.company)])
 	for (const key of ["employee", "company", "department"]) {
 		if (state.filters[key]) filters.push([key, "=", state.filters[key]])
 	}
@@ -207,8 +258,8 @@ const list = useDocList({
 	],
 	searchFields: ["employee_name", "employee", "name"],
 	defaultSort: { field: "attendance_date", order: "desc" },
-	buildFilters: (state) => {
-		const filters = baseFilters(state)
+	buildFilters: async (state) => {
+		const filters = await baseFilters(state)
 		if (state.filters.status) filters.push(["status", "=", state.filters.status])
 		return filters
 	},
@@ -216,9 +267,38 @@ const list = useDocList({
 
 const statusCounts = ref<Record<string, number>>({})
 async function loadCounts() {
-	statusCounts.value = await getGroupCounts("Attendance", "status", baseFilters(list.state)).catch(() => ({}))
+	statusCounts.value = await baseFilters(list.state)
+		.then((filters) => getGroupCounts("Attendance", "status", filters))
+		.catch(() => ({}))
 }
-watch(() => JSON.stringify(baseFilters(list.state)), loadCounts, { immediate: true })
+// The status chips filter the rows only, so their own counts ignore the status filter
+watch(() => JSON.stringify({ ...list.state.filters, status: "" }), loadCounts, { immediate: true })
+
+/** A picked suggestion filters on that one employee, shown in the Employee picker. */
+function pickEmployee(employee: string) {
+	list.state.filters = { ...list.state.filters, employee, employee_id: "" }
+}
+
+/**
+ * Employees of the company (all companies when none is picked) whose name, ID or Employee Number
+ * contains the text; Attendance itself has no Employee Number.
+ */
+async function findEmployees(text: string, company?: string) {
+	const like = `%${text}%`
+	const rows = await getList<{ name: string }>({
+		doctype: "Employee",
+		fields: ["name"],
+		filters: company ? [["company", "=", company]] : [],
+		or_filters: [
+			["employee_name", "like", like],
+			["name", "like", like],
+			["employee_number", "like", like],
+		],
+		limit: 0,
+	})
+	// No match must show no attendance, not all of it
+	return rows.length ? rows.map((r) => r.name) : [""]
+}
 
 const hasFilters = computed(
 	() => !!list.state.search || Object.entries(list.state.filters).some(([k, v]) => k !== "status" && !!v)

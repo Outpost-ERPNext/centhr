@@ -10,7 +10,9 @@ const TONES: Record<string, Record<string, Tone>> = {
 		"On Leave": "amber",
 		"Half Day": "amber",
 	},
+	"Attendance Request": { "Work From Home": "blue", "On Duty": "green" },
 	"Employee Checkin": { IN: "green", OUT: "blue" },
+	"Shift Assignment": { Active: "green", Inactive: "gray" },
 	"Payroll Entry": { Queued: "amber", Failed: "red" },
 	"Salary Slip": { Withheld: "amber" },
 	docstatus: { Draft: "gray", Submitted: "blue", Cancelled: "red", Expired: "gray" },
@@ -39,3 +41,5 @@ export const ATTENDANCE_SUMMARY_STATUSES = ["Present", "Absent", "On Leave"]
 
 /** Leave applied for but not approved yet. Not an Attendance status: worked out from open Leave Applications. */
 export const PENDING_LEAVE = { code: "PLA", label: "Pending leave approval", tone: "blue" as Tone }
+/** An Attendance Request not submitted yet. Not an Attendance status: worked out from draft Attendance Requests. */
+export const PENDING_REQUEST = { code: "ARR", label: "Attendance request pending", tone: "gray" as Tone }
