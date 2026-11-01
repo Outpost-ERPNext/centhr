@@ -100,11 +100,13 @@ after_install = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.leave_policy.setup.setup_leave_policy",
 ]
 after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.leave_policy.setup.setup_leave_policy",
 ]
 
 # Uninstallation
@@ -280,6 +282,13 @@ doc_events = {
 # 		"centhr.tasks.monthly"
 # 	],
 # }
+
+scheduler_events = {
+	"daily": [
+		"centhr.leave_policy.allocation.allocate_yearly_leaves",
+		"centhr.leave_policy.allocation.accrue_annual_leave",
+	],
+}
 
 # Testing
 # -------
