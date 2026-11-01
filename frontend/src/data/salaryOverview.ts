@@ -1,12 +1,17 @@
 import type { Column } from "@/components/DataTable.vue"
-import { api } from "@/data/api"
+import { api, downloadFile } from "@/data/api"
 import { formatCurrency, formatDateShort } from "@/utils/format"
 import type { Tone } from "@/utils/status"
 
-/** One employee of the company in the payroll period, from centhr.api.salary_overview.get_salary_overview. */
+const METHOD = "centhr.api.salary_overview"
+
+/** One employee in the payroll period, from centhr.api.salary_overview.get_salary_overview. */
 export interface SalaryRow {
 	name: string
 	employee_name: string
+	company: string
+	salary_mode: string | null
+	bank_ac_no: string | null
 	department: string | null
 	designation: string | null
 	status: string
@@ -40,12 +45,14 @@ export interface Tile extends RowFilter {
 	tone?: Tone
 }
 
+/** Without a company, every company the user can see. */
 export function getSalaryOverview(company: string, period: Period) {
-	return api<SalaryRow[]>("centhr.api.salary_overview.get_salary_overview", {
-		company,
-		from_date: period.from,
-		to_date: period.to,
-	})
+	return api<SalaryRow[]>(`${METHOD}.get_salary_overview`, { company, from_date: period.from, to_date: period.to })
+}
+
+/** The rows the page shows, in its order, as an Excel file. */
+export function exportSalaryOverview(company: string, period: Period, employees: string[]) {
+	return downloadFile(`${METHOD}.export_salary_overview`, { company, from_date: period.from, to_date: period.to, employees })
 }
 
 /** The stat tiles; each one also filters the table. */
@@ -70,6 +77,7 @@ export const STRUCTURE_VIEWS: RowFilter[] = [
 export const COLUMNS = {
 	name: { key: "name", label: "Employee ID", width: "110px", sortable: true },
 	employee_name: { key: "employee_name", label: "Employee name", width: "minmax(180px,1.8fr)", sortable: true, class: "font-medium" },
+	company: { key: "company", label: "Company", width: "minmax(120px,1.2fr)", sortable: true, hideOnMobile: true },
 	department: { key: "department", label: "Department", width: "minmax(130px,1.2fr)", sortable: true, hideOnMobile: true },
 	designation: { key: "designation", label: "Designation", width: "minmax(130px,1.2fr)", sortable: true, hideOnMobile: true },
 	salary_structure: { key: "salary_structure", label: "Current structure", width: "minmax(170px,1.6fr)", sortable: true },
@@ -86,11 +94,6 @@ export function countBy(filters: RowFilter[], rows: SalaryRow[], period: Period)
 	return Object.fromEntries(filters.map((f) => [f.key, rows.filter((r) => f.test(r, period)).length]))
 }
 
-/** Sorted, distinct non-empty values of one column, for the filter dropdowns. */
-export function distinct(rows: SalaryRow[], key: keyof SalaryRow): string[] {
-	return [...new Set(rows.map((r) => r[key]).filter(Boolean) as string[])].sort()
-}
-
 export function compareRows(a: SalaryRow, b: SalaryRow, key: string): number {
 	const x = a[key as keyof SalaryRow] ?? ""
 	const y = b[key as keyof SalaryRow] ?? ""
@@ -102,6 +105,6 @@ function money(key: string, label: string): Column {
 	return { key, label, width: "130px", align: "right", sortable: true, format: (v, r) => formatCurrency(v, r.currency) }
 }
 
-function inPeriod(date: string | null, period: Period): boolean {
+export function inPeriod(date: string | null, period: Period): boolean {
 	return !!date && period.from <= date && date <= period.to
 }

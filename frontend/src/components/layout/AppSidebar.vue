@@ -35,12 +35,12 @@
 							:aria-expanded="!closedGroups[item.label]"
 							@click="closedGroups[item.label] = !closedGroups[item.label]"
 						>
-							<template #suffix>
-								<span
-									class="lucide-chevron-right mr-1.5 size-4 text-ink-gray-5 transition-transform"
-									:class="{ 'rotate-90': !closedGroups[item.label] }"
-								/>
-							</template>
+							<!-- Chevron right after the label, as on the group headings -->
+							<span class="truncate text-sm leading-tighter">{{ item.label }}</span>
+							<span
+								class="lucide-chevron-right ml-1 size-4 shrink-0 text-ink-gray-5 transition-transform"
+								:class="{ 'rotate-90': !closedGroups[item.label] }"
+							/>
 						</SidebarItem>
 						<!-- Icon-only sidebar has no room to indent or collapse, so it lists the children flat -->
 						<div v-show="collapsed || !closedGroups[item.label]" class="flex flex-col gap-0.5" :class="{ 'pl-4': !collapsed }">
@@ -161,6 +161,8 @@ const groups: { label: string; items: NavItem[] }[] = [
 					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
 				],
 			},
+			{ label: "Salary Component", icon: "lucide-list-plus", route: "/salary-components", doctype: "Salary Component" },
+			{ label: "Salary Structure", icon: "lucide-layers", route: "/salary-structures", doctype: "Salary Structure" },
 		],
 	},
 ]

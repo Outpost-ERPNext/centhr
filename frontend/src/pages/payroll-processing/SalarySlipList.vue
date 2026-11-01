@@ -31,7 +31,7 @@ import { COLUMNS } from "@/data/salaryOverview"
 import { useSalaryOverview } from "@/data/useSalaryOverview"
 import { routeFor } from "@/utils/routes"
 
-const overview = useSalaryOverview()
+const overview = useSalaryOverview("slips")
 const importOpen = ref(false)
 
 const columns = [

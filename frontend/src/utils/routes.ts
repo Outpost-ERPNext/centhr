@@ -14,6 +14,8 @@ const ROUTES: Record<string, string> = {
 	"Employee Grade": "/grades",
 	Designation: "/designations",
 	"Salary Structure Assignment": "/salary-structure-assignments",
+	"Salary Component": "/salary-components",
+	"Salary Structure": "/salary-structures",
 	"Payroll Entry": "/payroll-processing/payroll-entries",
 	"Salary Slip": "/payroll-processing/salary-slips",
 }

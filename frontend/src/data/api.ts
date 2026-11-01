@@ -27,6 +27,39 @@ export async function api<T = any>(
 	}
 }
 
+/** POSTs to a whitelisted method that answers with a file, and saves that file. */
+export async function downloadFile(method: string, args: Record<string, any>) {
+	const body = new URLSearchParams()
+	for (const [key, value] of Object.entries(args)) {
+		if (value !== undefined && value !== null) body.append(key, typeof value === "string" ? value : JSON.stringify(value))
+	}
+	const response = await fetch(`/api/method/${method}`, {
+		method: "POST",
+		body,
+		headers: { "X-Frappe-CSRF-Token": window.csrf_token || "" },
+	})
+	if (!response.ok) {
+		toast.error(serverMessage(await response.json().catch(() => ({}))) || "Could not download the file")
+		throw new Error("Download failed")
+	}
+	const name = response.headers.get("Content-Disposition")?.match(/filename="?([^";]+)"?/)?.[1] || "download.xlsx"
+	const url = URL.createObjectURL(await response.blob())
+	const link = Object.assign(document.createElement("a"), { href: url, download: decodeURIComponent(name) })
+	link.click()
+	URL.revokeObjectURL(url)
+}
+
+/** The first message in a raw Frappe error response, for requests made without `call`. */
+export function serverMessage(body: { _server_messages?: string; exception?: string }): string {
+	try {
+		const [first] = JSON.parse(body._server_messages || "[]")
+		if (first) return stripHtml(JSON.parse(first).message)
+	} catch {
+		// Not the usual message format; fall back to the exception
+	}
+	return body.exception ? stripHtml(body.exception) : ""
+}
+
 export function errorMessage(error: unknown): string {
 	const err = error as FrappeResourceError
 	const messages = (err?.messages || []).map(stripHtml).filter(Boolean)

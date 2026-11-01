@@ -1,68 +1,76 @@
 import { computed, reactive, ref, watch } from "vue"
-import { useRoute, useRouter } from "vue-router"
-import { getList } from "@/data/list"
+import { useRoute, useRouter, type LocationQuery } from "vue-router"
 import { STRUCTURE_VIEWS, TILES, compareRows, countBy, getSalaryOverview, type SalaryRow } from "@/data/salaryOverview"
+import { readStorage, writeStorage } from "@/utils/storage"
+
+const DEFAULTS = {
+	company: "",
+	from: "",
+	to: "",
+	tile: "active",
+	view: "all",
+	search: "",
+	department: "",
+	structure: "",
+	employee: "",
+	sort: "name",
+	order: "asc" as "asc" | "desc",
+	page: 1,
+	pageSize: 20,
+}
+type State = typeof DEFAULTS
+const FILTER_KEYS = ["company", "tile", "view", "search", "department", "structure", "employee", "pageSize"] as const
 
 /**
- * Employees of one company in one payroll period, with the tiles, chips, filters, sort and paging
- * of the salary overview pages. Company and period live in the URL, so a refresh keeps the view.
+ * Employees in one payroll period, with the tiles, chips, filters, sort and paging of the salary overview pages.
+ * The whole view lives in the URL, so Back restores it; the last view of each page is also kept for the next visit.
  */
-export function useSalaryOverview() {
+export function useSalaryOverview(page: string) {
 	const route = useRoute()
 	const router = useRouter()
+	const storageKey = `centhr-salary-overview-${page}`
 
-	const company = ref((route.query.company as string) || "")
-	const period = reactive({ from: (route.query.from as string) || "", to: (route.query.to as string) || "" })
-
+	const state = reactive<State>(readState(Object.keys(route.query).length ? route.query : storedQuery(storageKey)))
 	const rows = ref<SalaryRow[]>([])
 	const loading = ref(false)
 	const error = ref<string | null>(null)
 
-	const tile = ref("active")
-	const view = ref("all")
-	const search = ref("")
-	const department = ref("")
-	const structure = ref("")
-	const sort = reactive({ field: "name", order: "asc" as "asc" | "desc" })
-	const page = ref(1)
-	const pageSize = ref(20)
-
-	const tileCounts = computed(() => countBy(TILES, rows.value, period))
+	const tileCounts = computed(() => countBy(TILES, rows.value, state))
 	// The chips count within the selected tile, so they add up to what the table can show
-	const tileRows = computed(() => rows.value.filter((r) => findTest(TILES, tile.value)(r, period)))
-	const viewCounts = computed(() => countBy(STRUCTURE_VIEWS, tileRows.value, period))
+	const tileRows = computed(() => rows.value.filter((r) => findTest(TILES, state.tile)(r, state)))
+	const viewCounts = computed(() => countBy(STRUCTURE_VIEWS, tileRows.value, state))
 
 	const filtered = computed(() => {
-		const viewTest = findTest(STRUCTURE_VIEWS, view.value)
-		const term = search.value.trim().toLowerCase()
+		const viewTest = findTest(STRUCTURE_VIEWS, state.view)
+		const term = state.search.trim().toLowerCase()
 		return tileRows.value
-			.filter((r) => viewTest(r, period))
+			.filter((r) => viewTest(r, state))
 			.filter((r) => !term || r.name.toLowerCase().includes(term) || r.employee_name.toLowerCase().includes(term))
-			.filter((r) => !department.value || r.department === department.value)
-			.filter((r) => !structure.value || r.salary_structure === structure.value)
-			.sort((a, b) => compareRows(a, b, sort.field) * (sort.order === "asc" ? 1 : -1))
+			.filter((r) => !state.department || r.department === state.department)
+			.filter((r) => !state.structure || r.salary_structure === state.structure)
+			.filter((r) => !state.employee || r.name === state.employee)
+			.sort((a, b) => compareRows(a, b, state.sort) * (state.order === "asc" ? 1 : -1))
 	})
-	const pageRows = computed(() => filtered.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
-	const hasFilters = computed(() => !!(search.value || department.value || structure.value || view.value !== "all"))
+	const pageRows = computed(() => filtered.value.slice((state.page - 1) * state.pageSize, state.page * state.pageSize))
+	const hasFilters = computed(() => !!(state.search || state.department || state.structure || state.employee || state.view !== "all"))
 
-	watch([tile, view, search, department, structure, pageSize], () => (page.value = 1))
-	watch([company, () => period.from, () => period.to], () => {
-		router.replace({
-			query: { ...route.query, company: company.value || undefined, from: period.from || undefined, to: period.to || undefined },
-		})
-		load()
-	})
-	if (company.value) load()
-	else setDefaultCompany()
+	watch(
+		() => FILTER_KEYS.map((key) => state[key]).join("|"),
+		() => (state.page = 1)
+	)
+	watch(() => ({ ...state }), persist, { deep: true })
+	watch([() => state.company, () => state.from, () => state.to], load)
+	persist()
+	load()
 
 	let requestId = 0
 	async function load() {
-		if (!company.value || !period.from || !period.to) return
+		if (!state.from || !state.to) return
 		const id = ++requestId
 		loading.value = true
 		error.value = null
 		try {
-			const result = await getSalaryOverview(company.value, period)
+			const result = await getSalaryOverview(state.company, state)
 			// A slower, older request must not overwrite a newer one
 			if (id === requestId) rows.value = result
 		} catch (e: any) {
@@ -72,55 +80,48 @@ export function useSalaryOverview() {
 		}
 	}
 
-	function setCompany(value: string) {
-		company.value = value
-		rows.value = []
-		clearFilters()
-	}
-
-	/** Opens on the first company the user can see. */
-	async function setDefaultCompany() {
-		const [first] = await getList({ doctype: "Company", fields: ["name"], order_by: "name asc", limit: 1, silent: true }).catch(() => [])
-		if (first && !company.value) company.value = first.name
+	function persist() {
+		const query = Object.fromEntries(
+			Object.entries(state)
+				.filter(([key, value]) => value !== DEFAULTS[key as keyof State])
+				.map(([key, value]) => [key, String(value)])
+		)
+		router.replace({ query })
+		writeStorage(storageKey, JSON.stringify(query))
 	}
 
 	function clearFilters() {
-		search.value = department.value = structure.value = ""
-		view.value = "all"
+		Object.assign(state, { search: "", department: "", structure: "", employee: "", view: "all" })
 	}
 
 	function toggleSort(field: string) {
-		sort.order = sort.field === field && sort.order === "asc" ? "desc" : "asc"
-		sort.field = field
+		state.order = state.sort === field && state.order === "asc" ? "desc" : "asc"
+		state.sort = field
 	}
 
-	return {
-		company,
-		period,
-		rows,
-		loading,
-		error,
-		tile,
-		view,
-		search,
-		department,
-		structure,
-		sort,
-		page,
-		pageSize,
-		tileCounts,
-		viewCounts,
-		filtered,
-		pageRows,
-		hasFilters,
-		load,
-		setCompany,
-		clearFilters,
-		toggleSort,
-	}
+	return { state, rows, loading, error, tileCounts, viewCounts, filtered, pageRows, hasFilters, load, clearFilters, toggleSort }
 }
 
 export type SalaryOverview = ReturnType<typeof useSalaryOverview>
+
+function readState(query: LocationQuery | Record<string, string>): State {
+	const value = (key: keyof State) => (typeof query[key] === "string" ? (query[key] as string) : undefined)
+	return {
+		...DEFAULTS,
+		...Object.fromEntries(Object.keys(DEFAULTS).flatMap((key) => (value(key as keyof State) ? [[key, value(key as keyof State)]] : []))),
+		order: value("order") === "desc" ? "desc" : "asc",
+		page: Math.max(1, Number(value("page")) || 1),
+		pageSize: Number(value("pageSize")) || DEFAULTS.pageSize,
+	}
+}
+
+function storedQuery(key: string): Record<string, string> {
+	try {
+		return JSON.parse(readStorage(key, "{}"))
+	} catch {
+		return {}
+	}
+}
 
 function findTest<T extends { key: string; test: any }>(filters: T[], key: string): T["test"] {
 	return (filters.find((f) => f.key === key) || filters[0]).test

@@ -84,7 +84,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { Button, Dialog, ErrorMessage, LoadingIndicator, toast } from "frappe-ui"
 import StatusBadge from "@/components/StatusBadge.vue"
-import { api, errorMessage, stripHtml } from "@/data/api"
+import { api, errorMessage, serverMessage, stripHtml } from "@/data/api"
 import { insertDoc } from "@/data/doc"
 import { formatNumber } from "@/utils/format"
 import type { Tone } from "@/utils/status"
@@ -196,8 +196,7 @@ async function upload(picked: File): Promise<string> {
 	})
 	const body = await response.json().catch(() => ({}))
 	if (!response.ok || !body.message?.file_url) {
-		const messages = body._server_messages ? JSON.parse(body._server_messages).map((m: string) => JSON.parse(m).message) : []
-		throw new Error(messages[0] || body.exception || "Could not upload the file")
+		throw new Error(serverMessage(body) || "Could not upload the file")
 	}
 	return body.message.file_url
 }

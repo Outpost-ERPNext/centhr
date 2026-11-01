@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -126,6 +126,18 @@ const routes: RouteRecordRaw[] = [
 				"SalarySlip",
 				() => import("@/pages/payroll-processing/SalarySlipList.vue"),
 				() => import("@/pages/payroll-processing/SalarySlipDetail.vue")
+			),
+			...docRoutes(
+				"salary-components",
+				"SalaryComponent",
+				() => import("@/pages/salary-components/SalaryComponentList.vue"),
+				() => import("@/pages/salary-components/SalaryComponentDetail.vue")
+			),
+			...docRoutes(
+				"salary-structures",
+				"SalaryStructure",
+				() => import("@/pages/salary-structures/SalaryStructureList.vue"),
+				() => import("@/pages/salary-structures/SalaryStructureDetail.vue")
 			),
 		] as RouteRecordRaw[],
 	},

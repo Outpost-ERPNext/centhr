@@ -3,6 +3,7 @@ import { api } from "@/data/api"
 /** A Payroll Entry and the step it waits for, from centhr.api.payroll. */
 export interface PayrollRun {
 	name: string
+	company: string
 	status: string
 	docstatus: number
 	number_of_employees: number
@@ -71,6 +72,7 @@ export function stages(run: PayrollRun) {
 	]
 }
 
+/** Without a company, every company's runs in the period. */
 export function getPayrollRuns(company: string, from: string, to: string) {
 	return api<PayrollRun[]>("centhr.api.payroll.get_payroll_runs", { company, start_date: from, end_date: to })
 }

@@ -78,6 +78,7 @@ class PayrollRun:
 		payouts = self.get_payouts()
 		return {
 			"name": entry.name,
+			"company": entry.company,
 			"status": entry.status,
 			"docstatus": entry.docstatus,
 			"number_of_employees": entry.number_of_employees,

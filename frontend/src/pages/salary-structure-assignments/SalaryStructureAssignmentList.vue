@@ -6,7 +6,7 @@
 				variant="solid"
 				icon-left="lucide-plus"
 				label="New assignment"
-				:route="{ name: 'SalaryStructureAssignmentNew', query: overview.company.value ? { company: overview.company.value } : {} }"
+				:route="{ name: 'SalaryStructureAssignmentNew', query: overview.state.company ? { company: overview.state.company } : {} }"
 			/>
 		</template>
 	</PageHeader>
@@ -18,7 +18,7 @@
 				v-else-if="canCreate"
 				size="sm"
 				label="Assign"
-				:route="{ name: 'SalaryStructureAssignmentNew', query: { company: overview.company.value, employee: row.name } }"
+				:route="{ name: 'SalaryStructureAssignmentNew', query: { company: row.company, employee: row.name } }"
 			/>
 		</template>
 	</SalaryOverviewView>
@@ -32,7 +32,7 @@ import { can } from "@/data/permissions"
 import { COLUMNS } from "@/data/salaryOverview"
 import { useSalaryOverview } from "@/data/useSalaryOverview"
 
-const overview = useSalaryOverview()
+const overview = useSalaryOverview("assignments")
 const canCreate = can("Salary Structure Assignment").create
 
 const columns = [

@@ -74,7 +74,7 @@ import { STEPS, runPayrollStep, stages, type PayrollRun, type StepKey } from "@/
 import { formatNumber } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
 
-const props = defineProps<{ run: PayrollRun; company: string }>()
+const props = defineProps<{ run: PayrollRun }>()
 const emit = defineEmits<{ changed: [run: PayrollRun] }>()
 
 const busy = ref(false)
@@ -83,7 +83,7 @@ const accountOpen = ref(false)
 const account = ref<string | null>(null)
 
 // As in the HRMS Payroll Entry form: pay out of a bank or cash ledger of the company
-const accountFilters = computed(() => ({ company: props.company, is_group: 0, account_type: ["in", ["Bank", "Cash"]] }))
+const accountFilters = computed(() => ({ company: props.run.company, is_group: 0, account_type: ["in", ["Bank", "Cash"]] }))
 const moreOptions = computed(() => [{ label: STEPS.cancel.label, icon: STEPS.cancel.icon, onClick: () => start("cancel") }])
 
 function start(step: StepKey) {

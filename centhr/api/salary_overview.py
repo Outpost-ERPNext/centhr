@@ -1,19 +1,57 @@
 import frappe
+from frappe import _
 from frappe.utils import getdate
+from frappe.utils.xlsxutils import build_xlsx_response
+
+# Label and row key of each column in the Excel export
+EXPORT_COLUMNS = [
+	(_("Employee ID"), "name"),
+	(_("Employee Name"), "employee_name"),
+	(_("Company"), "company"),
+	(_("Department"), "department"),
+	(_("Designation"), "designation"),
+	(_("Status"), "status"),
+	(_("Salary Structure"), "salary_structure"),
+	(_("Base Salary"), "base"),
+	(_("Effective Since"), "effective_from"),
+	(_("Payroll Status"), "slip_status"),
+	(_("Gross Pay"), "gross_pay"),
+	(_("Deductions"), "total_deduction"),
+	(_("Net Pay"), "net_pay"),
+]
 
 
 @frappe.whitelist()
-def get_salary_overview(company: str, from_date: str, to_date: str) -> list[dict]:
-	"""One row per employee of the company in the payroll period, with their salary structure and salary slip."""
+def get_salary_overview(from_date: str, to_date: str, company: str | None = None) -> list[dict]:
+	"""One row per employee in the payroll period, with their salary structure and salary slip.
+	Without a company, employees of every company the user can see."""
 	return SalaryOverview(company, from_date, to_date).get_rows()
+
+
+@frappe.whitelist(methods=["POST"])
+def export_salary_overview(
+	from_date: str, to_date: str, company: str | None = None, employees: list[str] | str | None = None
+):
+	"""The overview as an Excel file; `employees` keeps the rows and order the page shows."""
+	rows = SalaryOverview(company, from_date, to_date).get_rows()
+	# A form POST sends the list as JSON
+	employees = frappe.parse_json(employees) if isinstance(employees, str) else employees
+	if employees is not None:
+		by_name = {row["name"]: row for row in rows}
+		rows = [by_name[name] for name in employees if name in by_name]
+
+	data = [[label for label, _key in EXPORT_COLUMNS]]
+	data += [[row.get(key) for _label, key in EXPORT_COLUMNS] for row in rows]
+	build_xlsx_response(data, f"Payroll {company or 'All Companies'} {from_date} to {to_date}")
 
 
 class SalaryOverview:
 	"""Active employees plus those who left in the period, as they still get a final salary slip.
 	Every query goes through get_list, so the user's permissions apply."""
 
-	def __init__(self, company: str, from_date: str, to_date: str):
-		self.company = company
+	def __init__(self, company: str | None, from_date: str, to_date: str):
+		# Employees and their records are filtered by company only when one is chosen
+		self.company_filter = {"company": company} if company else {}
 		self.from_date = getdate(from_date)
 		self.to_date = getdate(to_date)
 
@@ -46,12 +84,23 @@ class SalaryOverview:
 	def get_employees(self) -> list:
 		return frappe.get_list(
 			"Employee",
-			filters={"company": self.company},
+			filters=self.company_filter,
 			or_filters=[
 				["status", "=", "Active"],
 				["relieving_date", "between", [self.from_date, self.to_date]],
 			],
-			fields=["name", "employee_name", "department", "designation", "status", "date_of_joining", "relieving_date"],
+			fields=[
+				"name",
+				"employee_name",
+				"company",
+				"department",
+				"designation",
+				"status",
+				"date_of_joining",
+				"relieving_date",
+				"salary_mode",
+				"bank_ac_no",
+			],
 			order_by="name asc",
 			limit_page_length=0,
 		)
@@ -61,7 +110,7 @@ class SalaryOverview:
 		return self.get_by_employee(
 			"Salary Structure Assignment",
 			employees,
-			filters={"company": self.company, "docstatus": 1, "from_date": ["<=", self.to_date]},
+			filters={**self.company_filter, "docstatus": 1, "from_date": ["<=", self.to_date]},
 			fields=["name", "salary_structure", "base", "currency", "from_date"],
 			order_by="from_date asc",
 		)
@@ -74,7 +123,7 @@ class SalaryOverview:
 			"Salary Slip",
 			employees,
 			filters={
-				"company": self.company,
+				**self.company_filter,
 				"docstatus": ["!=", 2],
 				"start_date": ["<=", self.to_date],
 				"end_date": [">=", self.from_date],

@@ -5,12 +5,12 @@ from centhr.api.payroll_run import PayrollGenerator, PayrollRun
 
 
 @frappe.whitelist()
-def get_payroll_runs(company: str, start_date: str, end_date: str) -> list[dict]:
-	"""The period's payroll entries, each with the step it waits for."""
+def get_payroll_runs(start_date: str, end_date: str, company: str | None = None) -> list[dict]:
+	"""The period's payroll entries, each with the step it waits for. Without a company, every company's."""
 	names = frappe.get_list(
 		"Payroll Entry",
 		filters={
-			"company": company,
+			**({"company": company} if company else {}),
 			"start_date": [">=", start_date],
 			"end_date": ["<=", end_date],
 			"docstatus": ["!=", 2],
