@@ -16,11 +16,13 @@ const TONES: Record<string, Record<string, Tone>> = {
 	"Payroll Entry": { Queued: "amber", Failed: "red" },
 	"Salary Slip": { Withheld: "amber" },
 	docstatus: { Draft: "gray", Submitted: "blue", Cancelled: "red", Expired: "gray" },
+	// Approval workflow states, for DocTypes that have no status of their own
+	workflow: { Open: "amber", "Approved by HOD": "blue", Approved: "green", Rejected: "red" },
 }
 
 export function toneFor(doctype: string, status: string | null | undefined): Tone {
 	if (!status) return "gray"
-	return TONES[doctype]?.[status] || TONES.docstatus[status] || "gray"
+	return TONES[doctype]?.[status] || TONES.docstatus[status] || TONES.workflow[status] || "gray"
 }
 
 export function docstatusLabel(docstatus: number) {

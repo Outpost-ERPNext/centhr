@@ -18,17 +18,7 @@
 					class="hidden sm:inline-flex"
 					:route="employeeRoute"
 				/>
-				<template v-if="workflow">
-					<Button
-						v-for="t in transitions"
-						:key="t.action"
-						:variant="isPositive(t.action) ? 'solid' : 'subtle'"
-						:theme="isNegative(t.action) ? 'red' : 'gray'"
-						:label="t.action"
-						:loading="acting === t.action"
-						@click="runTransition(t.action)"
-					/>
-				</template>
+				<WorkflowButtons v-if="workflowActions.workflow.value" :actions="workflowActions" />
 				<template v-else-if="canDecide">
 					<Button theme="red" label="Reject" :loading="acting === 'Rejected'" @click="decide('Rejected')" />
 					<Button variant="solid" label="Approve" :loading="acting === 'Approved'" @click="decide('Approved')" />
@@ -114,13 +104,14 @@ import { useRoute } from "vue-router"
 import { Button, dialog, toast } from "frappe-ui"
 import DocPageShell from "@/components/DocPageShell.vue"
 import DocActions from "@/components/DocActions.vue"
+import WorkflowButtons from "@/components/WorkflowButtons.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import SummaryCard from "@/components/SummaryCard.vue"
 import { useDocPage } from "@/data/useDocPage"
 import { api } from "@/data/api"
 import { submitDoc } from "@/data/doc"
 import { session } from "@/data/session"
-import { applyWorkflow, getTransitions, getWorkflow, type Workflow, type WorkflowTransition } from "@/data/workflow"
+import { isNegativeAction, useWorkflowActions } from "@/data/workflow"
 import { formatDate, formatDateShort, formatNumber } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
 
@@ -129,15 +120,12 @@ const route = useRoute()
 
 const LA = "hrms.hr.doctype.leave_application.leave_application"
 
-const workflow = ref<Workflow | null>(null)
-const transitions = ref<WorkflowTransition[]>([])
 const acting = ref<string | null>(null)
 
 const page = useDocPage("Leave Application", props.name, {
 	defaults: () => (route.query.employee ? { employee: route.query.employee } : {}),
 	onLoaded: async (doc) => {
-		workflow.value = await getWorkflow("Leave Application").catch(() => null)
-		transitions.value = workflow.value && doc.name && !page.isNew ? await getTransitions(doc).catch(() => []) : []
+		await workflowActions.load(doc)
 		if (page.isNew && doc.employee) onChange("employee", doc.employee)
 	},
 })
@@ -156,9 +144,9 @@ const subtitle = computed(() => {
 })
 
 const employeeRoute = computed(() => (page.isNew ? null : routeFor("Employee", page.doc.value.employee)))
-const workflowState = computed(() =>
-	workflow.value ? page.doc.value[workflow.value.workflow_state_field] : null
-)
+const workflowActions = useWorkflowActions("Leave Application", page)
+const workflow = workflowActions.workflow
+const workflowState = workflowActions.state
 
 const canDecide = computed(
 	() =>
@@ -176,8 +164,6 @@ const canSubmitDecision = computed(
 		page.permissions.value.submit
 )
 
-const isPositive = (action: string) => /approv|accept|submit/i.test(action)
-const isNegative = (action: string) => /reject|cancel|declin/i.test(action)
 
 /** Without a workflow, HRMS approves or rejects by setting the status and submitting. */
 function decide(status: "Approved" | "Rejected") {
@@ -201,19 +187,6 @@ function decide(status: "Approved" | "Rejected") {
 			}
 		},
 	})
-}
-
-async function runTransition(action: string) {
-	acting.value = action
-	try {
-		await applyWorkflow(page.doc.value, action)
-		toast.success(`${action} applied`)
-		await page.reload()
-	} catch {
-		// Shown by the api helper
-	} finally {
-		acting.value = null
-	}
 }
 
 let recalcTimer: ReturnType<typeof setTimeout> | undefined
@@ -293,7 +266,7 @@ const steps = computed<{ label: string; sub: string; state: StepState }[]>(() =>
 		return states.map((state, index) => ({
 			label: state,
 			sub: index === currentIndex ? "Current state" : "",
-			state: index < currentIndex ? "done" : index === currentIndex ? (isNegative(state) ? "rejected" : d.docstatus === 1 ? "done" : "current") : "todo",
+			state: index < currentIndex ? "done" : index === currentIndex ? (isNegativeAction(state) ? "rejected" : d.docstatus === 1 ? "done" : "current") : "todo",
 		}))
 	}
 	const rejected = d.status === "Rejected"

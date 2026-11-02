@@ -10,10 +10,16 @@
 		:link-queries="{ employee: 'erpnext.controllers.queries.employee_query' }"
 		@change="onChange"
 	>
+		<!-- With the approval workflow, the line manager approves or rejects instead of submitting -->
+		<template #actions>
+			<DocActions :page="page" :allow-submit="!workflowActions.workflow.value">
+				<WorkflowButtons :actions="workflowActions" />
+			</DocActions>
+		</template>
 		<template #status>
 			<span v-if="!page.isNew" class="flex items-center gap-2">
 				<StatusBadge pill doctype="Attendance Request" :status="page.doc.value.reason" />
-				<StatusBadge pill :status="docstatusLabel(page.docstatus.value)" />
+				<StatusBadge pill :status="workflowActions.state.value || docstatusLabel(page.docstatus.value)" />
 			</span>
 		</template>
 		<template #before-form>
@@ -77,11 +83,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
+import DocActions from "@/components/DocActions.vue"
 import DocPageShell from "@/components/DocPageShell.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import SummaryCard from "@/components/SummaryCard.vue"
+import WorkflowButtons from "@/components/WorkflowButtons.vue"
 import { api } from "@/data/api"
 import { useDocPage } from "@/data/useDocPage"
+import { useWorkflowActions } from "@/data/workflow"
 import { formatDate, formatDateShort, parseDate } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
 import { docstatusLabel } from "@/utils/status"
@@ -103,8 +112,12 @@ const page = useDocPage("Attendance Request", props.name, {
 		for (const key of ["employee", "company"]) if (route.query[key]) values[key] = route.query[key]
 		return values
 	},
-	onLoaded: loadWarnings,
+	onLoaded: (doc) => {
+		loadWarnings()
+		workflowActions.load(doc)
+	},
 })
+const workflowActions = useWorkflowActions("Attendance Request", page)
 
 // Only active employees of the chosen company
 const linkFilters = {

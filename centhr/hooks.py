@@ -101,12 +101,14 @@ after_install = [
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
+	"centhr.customization.attendance_request.setup_attendance_approval",
 ]
 after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
+	"centhr.customization.attendance_request.setup_attendance_approval",
 ]
 
 # Uninstallation

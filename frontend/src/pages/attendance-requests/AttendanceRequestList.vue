@@ -34,6 +34,12 @@
 			placeholder="Reason"
 		/>
 		<FilterSelect
+			v-if="readable('workflow_state')"
+			v-model="list.state.filters.approval"
+			:options="APPROVAL_OPTIONS"
+			placeholder="Approval"
+		/>
+		<FilterSelect
 			v-model="list.state.filters.state"
 			:options="[
 				{ label: 'Draft', value: '0' },
@@ -59,7 +65,7 @@
 		:show-clear="hasFilters"
 		empty-icon="lucide-calendar-plus"
 		:empty-message="hasFilters ? 'No attendance requests match these filters' : 'No attendance requests yet'"
-		mobile-aside="docstatus"
+		mobile-aside="status"
 		min-width="900px"
 		@sort="list.toggleSort"
 		@row-click="(row) => router.push(`/attendance-requests/${encodeURIComponent(row.name)}`)"
@@ -74,8 +80,8 @@
 		<template #cell-reason="{ row }">
 			<StatusBadge doctype="Attendance Request" :status="row.reason" />
 		</template>
-		<template #cell-docstatus="{ row }">
-			<StatusBadge :status="docstatusLabel(row.docstatus)" />
+		<template #cell-status="{ row }">
+			<StatusBadge :status="row.workflow_state || docstatusLabel(row.docstatus)" />
 		</template>
 	</DataTable>
 
@@ -97,6 +103,7 @@ import StatusBadge from "@/components/StatusBadge.vue"
 import { useDocList, type Filter } from "@/data/list"
 import { loadMeta, selectOptions } from "@/data/meta"
 import { can, useReadableFields } from "@/data/permissions"
+import { session } from "@/data/session"
 import { formatDateShort } from "@/utils/format"
 import { docstatusLabel } from "@/utils/status"
 
@@ -104,7 +111,15 @@ const router = useRouter()
 loadMeta("Attendance Request")
 
 const { ready, readable } = useReadableFields("Attendance Request")
-const FIELDS = ["employee", "employee_name", "company", "department", "from_date", "to_date", "half_day", "reason"]
+const FIELDS = ["employee", "employee_name", "company", "department", "from_date", "to_date", "half_day", "reason", "workflow_state"]
+
+// The line manager approves each request; "Waiting for me" is their queue
+const APPROVAL_OPTIONS = [
+	{ label: "Waiting for me", value: "mine" },
+	{ label: "Open", value: "Open" },
+	{ label: "Approved", value: "Approved" },
+	{ label: "Rejected", value: "Rejected" },
+]
 
 const list = useDocList({
 	doctype: "Attendance Request",
@@ -118,6 +133,8 @@ const list = useDocList({
 			if (state.filters[key] && readable(key)) filters.push([key, "=", state.filters[key]])
 		}
 		if (state.filters.state) filters.push(["docstatus", "=", Number(state.filters.state)])
+		if (state.filters.approval === "mine") filters.push(["line_manager", "=", session.user], ["workflow_state", "=", "Open"])
+		else if (state.filters.approval) filters.push(["workflow_state", "=", state.filters.approval])
 		// A request covers a period, so a date filter keeps the requests that overlap it
 		const { date_op: op, date_from: from, date_to: to } = state.filters
 		if (op && from) {
@@ -154,7 +171,7 @@ const columns = computed<Column[]>(() =>
 		{ key: "half_day", label: "Half day", width: "90px", format: (v: any) => (v ? "Yes" : ""), hideOnMobile: true },
 		{ key: "reason", label: "Reason", width: "minmax(130px,1fr)", sortable: true },
 		{ key: "company", label: "Company", width: "minmax(130px,1.2fr)", sortable: true, hideOnMobile: true },
-		{ key: "docstatus", label: "Document", width: "minmax(100px,0.9fr)", sortable: true },
-	].filter((c) => c.key === "docstatus" || readable(c.key))
+		{ key: "status", label: "Status", width: "minmax(100px,0.9fr)" },
+	].filter((c) => c.key === "status" || readable(c.key))
 )
 </script>

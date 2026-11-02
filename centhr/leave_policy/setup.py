@@ -3,6 +3,7 @@
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from centhr.customization.workflow import create_workflow
 from centhr.leave_policy.rules import ADOPTION, PATERNITY, RULES
 
 # Annual Leave days per cadre, filled in on grades that have none yet; HR can change them on the grade
@@ -39,7 +40,7 @@ def setup_leave_policy():
 	create_custom_fields(CUSTOM_FIELDS, update=True)
 	configure_leave_types()
 	set_cadre_days()
-	create_workflow()
+	create_leave_workflow()
 
 
 def configure_leave_types():
@@ -73,37 +74,22 @@ def set_cadre_days():
 			frappe.db.set_value("Employee Grade", grade, "annual_leave_days", days)
 
 
-def create_workflow():
+def create_leave_workflow():
 	"""HOD (the leave approver) approves first, then HR. Either can reject."""
-	if frappe.db.exists("Workflow", WORKFLOW):
-		return
-	for state, style in ((HOD_APPROVED, "Primary"), ("Approved", "Success"), ("Rejected", "Danger"), ("Open", "")):
-		if not frappe.db.exists("Workflow State", state):
-			frappe.get_doc({"doctype": "Workflow State", "workflow_state_name": state, "style": style}).insert(ignore_permissions=True)
-	for action in ("Approve", "Reject"):
-		if not frappe.db.exists("Workflow Action Master", action):
-			frappe.get_doc({"doctype": "Workflow Action Master", "workflow_action_name": action}).insert(ignore_permissions=True)
-
 	is_hod = "doc.leave_approver == frappe.session.user"
-	frappe.get_doc(
-		{
-			"doctype": "Workflow",
-			"workflow_name": WORKFLOW,
-			"document_type": "Leave Application",
-			"workflow_state_field": "workflow_state",
-			"is_active": 1,
-			"send_email_alert": 0,
-			"states": [
-				{"state": "Open", "doc_status": 0, "update_field": "status", "update_value": "Open", "allow_edit": "Employee"},
-				{"state": HOD_APPROVED, "doc_status": 0, "update_field": "status", "update_value": "Open", "allow_edit": "HR Manager"},
-				{"state": "Approved", "doc_status": 1, "update_field": "status", "update_value": "Approved", "allow_edit": "HR Manager"},
-				{"state": "Rejected", "doc_status": 1, "update_field": "status", "update_value": "Rejected", "allow_edit": "HR Manager"},
-			],
-			"transitions": [
-				{"state": "Open", "action": "Approve", "next_state": HOD_APPROVED, "allowed": "Leave Approver", "condition": is_hod},
-				{"state": "Open", "action": "Reject", "next_state": "Rejected", "allowed": "Leave Approver", "condition": is_hod},
-				{"state": HOD_APPROVED, "action": "Approve", "next_state": "Approved", "allowed": "HR Manager"},
-				{"state": HOD_APPROVED, "action": "Reject", "next_state": "Rejected", "allowed": "HR Manager"},
-			],
-		}
-	).insert(ignore_permissions=True)
+	create_workflow(
+		WORKFLOW,
+		"Leave Application",
+		states=[
+			{"state": "Open", "doc_status": 0, "update_field": "status", "update_value": "Open", "allow_edit": "Employee"},
+			{"state": HOD_APPROVED, "doc_status": 0, "update_field": "status", "update_value": "Open", "allow_edit": "HR Manager"},
+			{"state": "Approved", "doc_status": 1, "update_field": "status", "update_value": "Approved", "allow_edit": "HR Manager"},
+			{"state": "Rejected", "doc_status": 1, "update_field": "status", "update_value": "Rejected", "allow_edit": "HR Manager"},
+		],
+		transitions=[
+			{"state": "Open", "action": "Approve", "next_state": HOD_APPROVED, "allowed": "Leave Approver", "condition": is_hod},
+			{"state": "Open", "action": "Reject", "next_state": "Rejected", "allowed": "Leave Approver", "condition": is_hod},
+			{"state": HOD_APPROVED, "action": "Approve", "next_state": "Approved", "allowed": "HR Manager"},
+			{"state": HOD_APPROVED, "action": "Reject", "next_state": "Rejected", "allowed": "HR Manager"},
+		],
+	)
