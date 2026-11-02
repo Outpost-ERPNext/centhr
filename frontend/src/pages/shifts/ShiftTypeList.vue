@@ -2,6 +2,26 @@
 	<PageHeader :crumbs="[{ label: 'Shift' }]">
 		<template #actions>
 			<Button
+				v-if="canReadAssignments"
+				icon-left="lucide-calendar-clock"
+				label="Shift Assignment"
+				class="hidden md:inline-flex"
+				:route="{ name: 'ShiftAssignmentList' }"
+			/>
+			<Button
+				v-if="canBulkAssign"
+				icon-left="lucide-users-round"
+				label="Bulk Assign"
+				class="hidden md:inline-flex"
+				:route="{ name: 'ShiftAssignmentTool' }"
+			/>
+			<!-- Three labelled buttons do not fit in the header on small screens -->
+			<div v-if="assignmentOptions.length" class="md:hidden">
+				<Dropdown :options="assignmentOptions" align="end">
+					<Button icon="lucide-ellipsis" aria-label="Shift assignment actions" />
+				</Dropdown>
+			</div>
+			<Button
 				v-if="can('Shift Type').create"
 				variant="solid"
 				icon-left="lucide-plus"
@@ -97,7 +117,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRouter } from "vue-router"
-import { Button } from "frappe-ui"
+import { Button, Dropdown } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
 import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
@@ -114,6 +134,28 @@ const router = useRouter()
 // Shift Type has no company or assignee count; both come from its Shift Assignments,
 // shown only to users the Role Permission Manager lets read them
 const canReadAssignments = computed(() => can("Shift Assignment").read)
+const canBulkAssign = computed(() => can("Shift Assignment Tool").write)
+
+const assignmentOptions = computed(() => [
+	...(canReadAssignments.value
+		? [
+				{
+					label: "Shift Assignment",
+					icon: "lucide-calendar-clock",
+					onClick: () => router.push({ name: "ShiftAssignmentList" }),
+				},
+			]
+		: []),
+	...(canBulkAssign.value
+		? [
+				{
+					label: "Bulk Assign",
+					icon: "lucide-users-round",
+					onClick: () => router.push({ name: "ShiftAssignmentTool" }),
+				},
+			]
+		: []),
+])
 
 // Ask only for fields the user may read (permlevel), so a permission change cannot break the list
 const readableFields = ref<string[]>([])

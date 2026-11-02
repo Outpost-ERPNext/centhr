@@ -2,6 +2,7 @@
 	<DocPageShell
 		doctype="Shift Assignment"
 		list-label="Shift Assignment"
+		:parent-crumbs="[{ label: 'Shift', route: '/shifts' }]"
 		:page="page"
 		:title="page.doc.value.employee_name || page.doc.value.employee || page.doc.value.name"
 		:subtitle="subtitle"

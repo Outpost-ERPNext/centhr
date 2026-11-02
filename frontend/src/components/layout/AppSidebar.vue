@@ -60,7 +60,7 @@
 						:label="item.label"
 						:icon="item.icon"
 						:route="item.route"
-						:active="isActive(item.route)"
+						:active="isActive(item.route) || item.activeOn?.some(isActive)"
 						@click="$emit('navigate')"
 					/>
 				</template>
@@ -105,6 +105,8 @@ interface NavItem {
 	icon: string
 	route?: string
 	doctype?: string
+	/** Pages opened from this item's page, which have no sidebar item of their own. */
+	activeOn?: string[]
 	/** A sub-menu inside the group, expanded and collapsed in place. */
 	children?: NavLink[]
 }
@@ -115,18 +117,23 @@ const groups: { label: string; items: NavItem[] }[] = [
 		items: [
 			{ label: "Employees", icon: "lucide-users", route: "/employees", doctype: "Employee" },
 			{ label: "Leave Allocation", icon: "lucide-calendar-plus", route: "/leave-allocations", doctype: "Leave Allocation" },
-			{ label: "Shift", icon: "lucide-timer", route: "/shifts", doctype: "Shift Type" },
-			{ label: "Shift Assignment", icon: "lucide-calendar-clock", route: "/shift-assignments", doctype: "Shift Assignment" },
-			{ label: "Shift Assignment Tool", icon: "lucide-users-round", route: "/shift-assignment-tool", doctype: "Shift Assignment Tool" },
+			{
+				label: "Shift",
+				icon: "lucide-timer",
+				route: "/shifts",
+				doctype: "Shift Type",
+				activeOn: ["/shift-assignments", "/shift-assignment-tool"],
+			},
 			{ label: "Holiday List", icon: "lucide-calendar-off", route: "/holiday-lists", doctype: "Holiday List" },
-		],
-	},
-	{
-		label: "Organization",
-		items: [
-			{ label: "Department", icon: "lucide-building-2", route: "/departments", doctype: "Department" },
-			{ label: "Grade", icon: "lucide-award", route: "/grades", doctype: "Employee Grade" },
-			{ label: "Designation", icon: "lucide-briefcase", route: "/designations", doctype: "Designation" },
+			{
+				label: "Org Master",
+				icon: "lucide-network",
+				children: [
+					{ label: "Department", icon: "lucide-building-2", route: "/departments", doctype: "Department" },
+					{ label: "Grade", icon: "lucide-award", route: "/grades", doctype: "Employee Grade" },
+					{ label: "Designation", icon: "lucide-briefcase", route: "/designations", doctype: "Designation" },
+				],
+			},
 		],
 	},
 	{
@@ -148,10 +155,11 @@ const groups: { label: string; items: NavItem[] }[] = [
 		label: "Payroll",
 		items: [
 			{
-				label: "Salary Structure Assignment",
-				icon: "lucide-wallet",
+				label: "Salary Structure",
+				icon: "lucide-layers",
 				route: "/salary-structure-assignments",
 				doctype: "Salary Structure Assignment",
+				activeOn: ["/salary-structures", "/salary-components", "/bulk-salary-structure-assignment"],
 			},
 			{
 				label: "Payroll Processing",
@@ -161,8 +169,6 @@ const groups: { label: string; items: NavItem[] }[] = [
 					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
 				],
 			},
-			{ label: "Salary Component", icon: "lucide-list-plus", route: "/salary-components", doctype: "Salary Component" },
-			{ label: "Salary Structure", icon: "lucide-layers", route: "/salary-structures", doctype: "Salary Structure" },
 		],
 	},
 ]

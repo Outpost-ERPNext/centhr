@@ -128,6 +128,8 @@ const props = defineProps<{
 	doctype: string
 	page: ReturnType<typeof useDocPage>
 	listLabel: string
+	/** Crumbs before the list, for pages reached through another page. */
+	parentCrumbs?: { label: string; route?: string }[]
 	title?: string
 	subtitle?: string
 	hiddenFields?: string[]
@@ -152,6 +154,7 @@ const doctypeLabel = computed(() => props.doctype)
 const listRoute = computed(() => listRouteFor(props.doctype) || "/")
 
 const crumbs = computed(() => [
+	...(props.parentCrumbs || []),
 	{ label: props.listLabel, route: listRoute.value },
 	{ label: props.page.isNew ? "New" : props.title || props.page.doc.value.name || "" },
 ])

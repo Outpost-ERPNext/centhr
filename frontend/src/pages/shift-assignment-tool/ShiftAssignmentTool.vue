@@ -1,5 +1,11 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Shift Assignment', route: '/shift-assignments' }, { label: 'Shift Assignment Tool' }]">
+	<PageHeader
+		:crumbs="[
+			{ label: 'Shift', route: '/shifts' },
+			{ label: 'Shift Assignment', route: '/shift-assignments' },
+			{ label: 'Bulk Assign' },
+		]"
+	>
 		<template v-if="ready" #actions>
 			<Dropdown v-if="processing" :options="processOptions" align="end">
 				<Button

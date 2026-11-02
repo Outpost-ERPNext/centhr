@@ -2,6 +2,20 @@
 	<PageHeader :crumbs="[{ label: 'Salary Structure Assignment' }]">
 		<template #actions>
 			<Button
+				v-for="link in links"
+				:key="link.label"
+				:icon-left="link.icon"
+				:label="link.label"
+				class="hidden md:inline-flex"
+				:route="{ name: link.routeName }"
+			/>
+			<!-- Four labelled buttons do not fit in the header on small screens -->
+			<div v-if="linkOptions.length" class="md:hidden">
+				<Dropdown :options="linkOptions" align="end">
+					<Button icon="lucide-ellipsis" aria-label="Salary structure actions" />
+				</Dropdown>
+			</div>
+			<Button
 				v-if="canCreate"
 				variant="solid"
 				icon-left="lucide-plus"
@@ -25,7 +39,8 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from "frappe-ui"
+import { useRouter } from "vue-router"
+import { Button, Dropdown } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
 import SalaryOverviewView from "@/components/SalaryOverviewView.vue"
 import { can } from "@/data/permissions"
@@ -34,6 +49,18 @@ import { useSalaryOverview } from "@/data/useSalaryOverview"
 
 const overview = useSalaryOverview("assignments")
 const canCreate = can("Salary Structure Assignment").create
+
+const router = useRouter()
+const links = [
+	{ label: "Bulk Assign", icon: "lucide-users-round", routeName: "BulkSalaryStructureAssignment", allowed: can("Bulk Salary Structure Assignment").write },
+	{ label: "Salary Structure", icon: "lucide-layers", routeName: "SalaryStructureList", allowed: can("Salary Structure").read },
+	{ label: "Salary Component", icon: "lucide-list-plus", routeName: "SalaryComponentList", allowed: can("Salary Component").read },
+].filter((link) => link.allowed)
+const linkOptions = links.map((link) => ({
+	label: link.label,
+	icon: link.icon,
+	onClick: () => router.push({ name: link.routeName }),
+}))
 
 const columns = [
 	COLUMNS.name,

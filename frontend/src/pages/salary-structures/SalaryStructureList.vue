@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Salary Structure' }]">
+	<PageHeader :crumbs="[{ label: 'Salary Structure Assignment', route: '/salary-structure-assignments' }, { label: 'Salary Structure' }]">
 		<template #actions>
 			<Button
 				v-if="can('Salary Structure').create"

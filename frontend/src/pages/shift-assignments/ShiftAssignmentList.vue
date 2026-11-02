@@ -1,10 +1,10 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Shift Assignment' }]">
+	<PageHeader :crumbs="[{ label: 'Shift', route: '/shifts' }, { label: 'Shift Assignment' }]">
 		<template #actions>
 			<Button
 				v-if="can('Shift Assignment Tool').write"
 				icon-left="lucide-users-round"
-				label="Assign in bulk"
+				label="Bulk Assign"
 				:route="{ name: 'ShiftAssignmentTool' }"
 			/>
 			<Button

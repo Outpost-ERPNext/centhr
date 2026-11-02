@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -113,6 +113,11 @@ const routes: RouteRecordRaw[] = [
 				path: "shift-assignment-tool",
 				name: "ShiftAssignmentTool",
 				component: () => import("@/pages/shift-assignment-tool/ShiftAssignmentTool.vue"),
+			},
+			{
+				path: "bulk-salary-structure-assignment",
+				name: "BulkSalaryStructureAssignment",
+				component: () => import("@/pages/bulk-salary-structure-assignment/BulkSalaryStructureAssignment.vue"),
 			},
 			{ path: "payroll-processing", redirect: { name: "PayrollEntryList" } },
 			...docRoutes(
