@@ -165,7 +165,7 @@ const groups: { label: string; items: NavItem[] }[] = [
 				label: "Payroll Processing",
 				icon: "lucide-banknote",
 				children: [
-					{ label: "Payroll Entry", icon: "lucide-calculator", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
+					{ label: "Payroll Dashboard", icon: "lucide-layout-dashboard", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
 					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
 				],
 			},

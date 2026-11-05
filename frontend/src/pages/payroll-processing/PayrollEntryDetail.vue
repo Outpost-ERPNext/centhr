@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="Payroll Entry"
-		list-label="Payroll Entry"
+		list-label="Payroll Dashboard"
 		:page="page"
 		:title="period || page.doc.value.name"
 		:subtitle="subtitle"

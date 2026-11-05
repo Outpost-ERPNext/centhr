@@ -123,7 +123,7 @@ const routes: RouteRecordRaw[] = [
 			...docRoutes(
 				"payroll-processing/payroll-entries",
 				"PayrollEntry",
-				() => import("@/pages/payroll-processing/PayrollEntryList.vue"),
+				() => import("@/pages/payroll-processing/PayrollDashboard.vue"),
 				() => import("@/pages/payroll-processing/PayrollEntryDetail.vue")
 			),
 			...docRoutes(

@@ -1,0 +1,127 @@
+{
+ "actions": [],
+ "autoname": "format:{obligation_name}-{company}",
+ "creation": "2026-11-05 10:00:00.000000",
+ "description": "A statutory payment (pension, tax, levy) accrued through payroll and remitted by a deadline. The Payroll Dashboard's Compliance tab tracks it from the liability account.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "obligation_name",
+  "company",
+  "liability_account",
+  "payment_account",
+  "column_break_schedule",
+  "frequency",
+  "due_day",
+  "due_months",
+  "disabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "obligation_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Obligation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "description": "Payroll credits this account when it accrues the obligation and it is debited when remitted.",
+   "fieldname": "liability_account",
+   "fieldtype": "Link",
+   "label": "Liability Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "description": "Bank or cash account a payment request pays from.",
+   "fieldname": "payment_account",
+   "fieldtype": "Link",
+   "label": "Payment Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_schedule",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Monthly",
+   "fieldname": "frequency",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Frequency",
+   "options": "Monthly\nQuarterly\nBi-Annually\nYearly",
+   "reqd": 1
+  },
+  {
+   "default": "10",
+   "description": "Day of the month the payment is due.",
+   "fieldname": "due_day",
+   "fieldtype": "Int",
+   "label": "Due Day",
+   "reqd": 1
+  },
+  {
+   "description": "Months it falls due, as numbers separated by commas, e.g. 3,12 for March and December. Monthly obligations are due the month after the pay cycle.",
+   "fieldname": "due_months",
+   "fieldtype": "Data",
+   "label": "Due Months"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-05 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "Statutory Obligation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "obligation_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "obligation_name"
+}
