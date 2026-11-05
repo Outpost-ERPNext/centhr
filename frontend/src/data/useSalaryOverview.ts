@@ -60,10 +60,11 @@ export function useSalaryOverview(page: string) {
 	)
 	watch(() => ({ ...state }), persist, { deep: true })
 	watch([() => state.company, () => state.from, () => state.to], load)
+	// Declared before the first load below, which uses it straight away
+	let requestId = 0
 	persist()
 	load()
 
-	let requestId = 0
 	async function load() {
 		if (!state.from || !state.to) return
 		const id = ++requestId
@@ -86,7 +87,9 @@ export function useSalaryOverview(page: string) {
 				.filter(([key, value]) => value !== DEFAULTS[key as keyof State])
 				.map(([key, value]) => [key, String(value)])
 		)
-		router.replace({ query })
+		// Keys the page itself keeps in the URL (such as the dashboard tab) stay as they are
+		const others = Object.fromEntries(Object.entries(route.query).filter(([key]) => !(key in DEFAULTS)))
+		router.replace({ query: { ...others, ...query } })
 		writeStorage(storageKey, JSON.stringify(query))
 	}
 
