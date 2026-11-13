@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { toast } from "frappe-ui"
+import { dialog, toast } from "frappe-ui"
 import DocPageShell from "@/components/DocPageShell.vue"
 import type { FormButton } from "@/components/DocForm.vue"
 import SummaryCard from "@/components/SummaryCard.vue"
@@ -96,7 +96,44 @@ function onChange(fieldname: string) {
 		addLocalHolidays()
 	} else if (fieldname === "holidays") {
 		updateTotal()
+	} else if (fieldname === "is_active") {
+		confirmActive()
 	}
+}
+
+/** Only one holiday list per company is active; the server deactivates the others on save. */
+async function confirmActive() {
+	const d = page.doc.value
+	const active = !!d.is_active
+	// Setting the value here does not emit a change, so it does not ask again
+	const revert = () => {
+		d.is_active = active ? 0 : 1
+	}
+	let message: string
+	if (active) {
+		if (!d.company) {
+			revert()
+			toast.error("Set a Company before you make this holiday list active")
+			return
+		}
+		const current = await api<string | null>(
+			"centhr.api.holiday_list.get_active_holiday_list",
+			{ company: d.company, exclude: page.isNew ? null : d.name },
+			{ silent: true }
+		).catch(() => null)
+		message = current
+			? `${current} is the active holiday list for ${d.company}. Make this list active instead? ${current} is deactivated, and this list is applied to all employees of ${d.company} when you save.`
+			: `Make this the active holiday list for ${d.company}? It is applied to all employees of ${d.company} when you save.`
+	} else {
+		message = `${d.company || "The company"} will have no active holiday list. Continue?`
+	}
+	dialog.confirm({
+		title: active ? "Make holiday list active" : "Deactivate holiday list",
+		message,
+		confirmLabel: active ? "Make active" : "Deactivate",
+		onConfirm: () => {},
+		onCancel: revert,
+	})
 }
 
 // Dates the automatic fill added and that are not saved yet, so a new country or subdivision replaces them

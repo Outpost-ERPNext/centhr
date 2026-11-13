@@ -101,7 +101,8 @@ const list = useDocList({
 	searchFields: ["employee_name", "name"],
 	defaultSort: { field: "employee_name", order: "asc" },
 	buildFilters: (state) =>
-		(["company", "department", "designation", "status", "grade"] as const)
+		// The masters' "Active employees" links filter on the last four through the URL
+		(["company", "department", "designation", "status", "grade", "cost_center", "channel", "employment_type", "gender"] as const)
 			.filter((key) => state.filters[key])
 			.map((key) => [key, "=", state.filters[key]] as Filter),
 })

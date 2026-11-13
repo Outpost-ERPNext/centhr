@@ -82,10 +82,12 @@ interface DocListOptions {
 }
 
 const QUERY_KEYS = ["q", "sort", "order", "page", "size"]
+const DEFAULT_PAGE_SIZE = 50
 
 /**
- * A paginated, sorted and filtered list. Its state lives in the URL query, so a
- * refresh or a shared link shows the same page.
+ * A sorted and filtered list that loads `pageSize` rows at a time, like the ERPNext
+ * list view: `page` is the number of chunks loaded. Its state lives in the URL query,
+ * so a refresh or a shared link shows the same rows.
  */
 export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 	const route = useRoute()
@@ -97,7 +99,7 @@ export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 		sortField: options.defaultSort.field,
 		sortOrder: options.defaultSort.order,
 		page: 1,
-		pageSize: options.pageSize || 20,
+		pageSize: options.pageSize || DEFAULT_PAGE_SIZE,
 	})
 	readQuery()
 
@@ -126,8 +128,8 @@ export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 					filters,
 					or_filters,
 					order_by: `${state.sortField} ${state.sortOrder}`,
-					start: (state.page - 1) * state.pageSize,
-					limit: state.pageSize,
+					start: 0,
+					limit: state.page * state.pageSize,
 				}),
 				getCount(options.doctype, filters, or_filters),
 			])
@@ -142,13 +144,42 @@ export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 		}
 	}
 
+	/** Appends the next chunk of rows; the count is already known. */
+	async function loadMore() {
+		const id = ++requestId
+		loading.value = true
+		error.value = null
+		const or_filters: Filter[] = state.search.trim()
+			? options.searchFields.map((f) => [f, "like", `%${state.search.trim()}%`])
+			: []
+		try {
+			const filters = await options.buildFilters(state)
+			if (id !== requestId) return
+			const data = await getList<T>({
+				doctype: options.doctype,
+				fields: typeof options.fields === "function" ? options.fields() : options.fields,
+				filters,
+				or_filters,
+				order_by: `${state.sortField} ${state.sortOrder}`,
+				start: rows.value.length,
+				limit: state.pageSize,
+			})
+			if (id !== requestId) return
+			rows.value = [...rows.value, ...data]
+		} catch (e: any) {
+			if (id === requestId) error.value = e?.messages?.[0] || e?.message || "Could not load records"
+		} finally {
+			if (id === requestId) loading.value = false
+		}
+	}
+
 	function readQuery() {
 		const q = route.query
 		state.search = (q.q as string) || ""
 		state.sortField = (q.sort as string) || options.defaultSort.field
 		state.sortOrder = q.order === "asc" || q.order === "desc" ? q.order : options.defaultSort.order
 		state.page = Math.max(1, Number(q.page) || 1)
-		state.pageSize = Number(q.size) || options.pageSize || 20
+		state.pageSize = Number(q.size) || options.pageSize || DEFAULT_PAGE_SIZE
 		const filters: Record<string, string> = {}
 		for (const [key, value] of Object.entries(q)) {
 			if (!QUERY_KEYS.includes(key) && typeof value === "string") filters[key] = value
@@ -165,7 +196,7 @@ export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 		if (state.sortField !== options.defaultSort.field) query.sort = state.sortField
 		if (state.sortOrder !== options.defaultSort.order) query.order = state.sortOrder
 		if (state.page > 1) query.page = String(state.page)
-		if (state.pageSize !== (options.pageSize || 20)) query.size = String(state.pageSize)
+		if (state.pageSize !== (options.pageSize || DEFAULT_PAGE_SIZE)) query.size = String(state.pageSize)
 		router.replace({ query })
 	}
 
@@ -192,13 +223,15 @@ export function useDocList<T = Record<string, any>>(options: DocListOptions) {
 	)
 	watch(
 		() => state.page,
-		() => {
+		(now, before) => {
 			if (resettingPage) {
 				resettingPage = false
 				return
 			}
 			writeQuery()
-			reload()
+			// Load More fetches only the next chunk, unless the loaded rows are out of step
+			if (now === before + 1 && rows.value.length === before * state.pageSize) loadMore()
+			else reload()
 		}
 	)
 

@@ -9,7 +9,7 @@
 				class="hidden md:inline-flex"
 				:route="{ name: link.routeName }"
 			/>
-			<!-- Four labelled buttons do not fit in the header on small screens -->
+			<!-- Three labelled buttons do not fit in the header on small screens -->
 			<div v-if="linkOptions.length" class="md:hidden">
 				<Dropdown :options="linkOptions" align="end">
 					<Button icon="lucide-ellipsis" aria-label="Salary structure actions" />
@@ -53,7 +53,6 @@ const canCreate = can("Salary Structure Assignment").create
 const router = useRouter()
 const links = [
 	{ label: "Bulk Assign", icon: "lucide-users-round", routeName: "BulkSalaryStructureAssignment", allowed: can("Bulk Salary Structure Assignment").write },
-	{ label: "Salary Structure", icon: "lucide-layers", routeName: "SalaryStructureList", allowed: can("Salary Structure").read },
 	{ label: "Salary Component", icon: "lucide-list-plus", routeName: "SalaryComponentList", allowed: can("Salary Component").read },
 ].filter((link) => link.allowed)
 const linkOptions = links.map((link) => ({

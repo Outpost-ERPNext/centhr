@@ -7,18 +7,43 @@
 		aria-label="Main navigation"
 		class="h-full border-r border-ch-line !bg-ch-sb"
 	>
-		<SidebarHeader title="CentHR" :subtitle="session.fullName || session.user || ''" :menu-items="menu">
-			<template #prefix>
-				<span
-					class="flex size-full items-center justify-center bg-ch-primary text-[15px] font-semibold text-ch-on-primary"
+		<!-- Collapse control lives on the header row and shows on hover -->
+		<div class="group/header relative">
+			<SidebarHeader title="CentHR" :subtitle="session.fullName || session.user || ''" :menu-items="menu">
+				<template #prefix>
+					<span
+						class="flex size-full items-center justify-center bg-ch-primary text-[15px] font-semibold text-ch-on-primary"
+					>
+						C
+					</span>
+				</template>
+			</SidebarHeader>
+			<template v-if="!mobile">
+				<!-- Collapsed: the arrow takes the logo's place -->
+				<button
+					v-if="collapsed"
+					class="absolute left-[10px] top-[10px] flex size-7 items-center justify-center rounded-[6px] bg-ch-subtle text-ch-ink-2 opacity-0 transition-opacity hover:text-ch-ink focus-visible:opacity-100 group-hover/header:opacity-100"
+					aria-label="Expand sidebar"
+					title="Expand sidebar"
+					@click="collapsed = false"
 				>
-					C
-				</span>
+					<span class="lucide-chevron-right size-4" />
+				</button>
+				<button
+					v-else
+					class="absolute right-2 top-[10px] flex size-7 items-center justify-center rounded-3 bg-ch-sb text-ch-ink-3 opacity-0 transition-opacity hover:bg-ch-subtle hover:text-ch-ink focus-visible:opacity-100 group-hover/header:opacity-100"
+					aria-label="Collapse sidebar"
+					title="Collapse sidebar"
+					@click="collapsed = true"
+				>
+					<span class="lucide-chevron-left size-4" />
+				</button>
 			</template>
-		</SidebarHeader>
+		</div>
 
 		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-1">
 			<SidebarItem label="Dashboard" icon="lucide-layout-dashboard" route="/" :active="route.name === 'Dashboard'" @click="$emit('navigate')" />
+			<SidebarItem label="Architecture" icon="lucide-brain-circuit" route="/architecture" @click="$emit('navigate')" />
 			<SidebarSection
 				v-for="group in visibleGroups"
 				:key="group.label"
@@ -66,10 +91,6 @@
 				</template>
 			</SidebarSection>
 		</div>
-
-		<div v-if="!mobile" class="px-2 pb-2">
-			<SidebarCollapseToggle />
-		</div>
 	</Sidebar>
 </template>
 
@@ -78,7 +99,6 @@ import { computed, reactive, watch } from "vue"
 import { useRoute } from "vue-router"
 import {
 	Sidebar,
-	SidebarCollapseToggle,
 	SidebarHeader,
 	SidebarItem,
 	SidebarSection,
@@ -86,6 +106,7 @@ import {
 } from "frappe-ui"
 import { can } from "@/data/permissions"
 import { logout, session } from "@/data/session"
+import { ORG_MASTERS } from "@/data/orgMaster"
 import { readStorage, writeStorage } from "@/utils/storage"
 
 defineProps<{ mobile?: boolean }>()
@@ -105,6 +126,8 @@ interface NavItem {
 	icon: string
 	route?: string
 	doctype?: string
+	/** Shown when the user can read at least one of these DocTypes. */
+	doctypes?: string[]
 	/** Pages opened from this item's page, which have no sidebar item of their own. */
 	activeOn?: string[]
 	/** A sub-menu inside the group, expanded and collapsed in place. */
@@ -128,11 +151,9 @@ const groups: { label: string; items: NavItem[] }[] = [
 			{
 				label: "Org Master",
 				icon: "lucide-network",
-				children: [
-					{ label: "Department", icon: "lucide-building-2", route: "/departments", doctype: "Department" },
-					{ label: "Grade", icon: "lucide-award", route: "/grades", doctype: "Employee Grade" },
-					{ label: "Designation", icon: "lucide-briefcase", route: "/designations", doctype: "Designation" },
-				],
+				route: "/org-master",
+				doctypes: ORG_MASTERS.map((m) => m.doctype),
+				activeOn: ORG_MASTERS.map((m) => m.route),
 			},
 		],
 	},
@@ -155,13 +176,6 @@ const groups: { label: string; items: NavItem[] }[] = [
 		label: "Payroll",
 		items: [
 			{
-				label: "Salary Structure",
-				icon: "lucide-layers",
-				route: "/salary-structure-assignments",
-				doctype: "Salary Structure Assignment",
-				activeOn: ["/salary-structures", "/salary-components", "/bulk-salary-structure-assignment"],
-			},
-			{
 				label: "Payroll Processing",
 				icon: "lucide-banknote",
 				children: [
@@ -180,7 +194,11 @@ const visibleGroups = computed(() =>
 			...g,
 			items: g.items
 				.map((item) => (item.children ? { ...item, children: item.children.filter((c) => can(c.doctype).read) } : item))
-				.filter((item) => (item.children ? item.children.length : can(item.doctype!).read)),
+				.filter((item) => {
+					if (item.children) return item.children.length > 0
+					if (item.doctypes) return item.doctypes.some((d) => can(d).read)
+					return can(item.doctype!).read
+				}),
 		}))
 		.filter((g) => g.items.length)
 )

@@ -123,6 +123,7 @@ import { getLayout, NO_VALUE_TYPES, type LayoutTab } from "@/data/meta"
 import type { useDocPage } from "@/data/useDocPage"
 import { docstatusLabel } from "@/utils/status"
 import { listRouteFor } from "@/utils/routes"
+import { ORG_MASTER_CRUMB, isOrgMaster } from "@/data/orgMaster"
 
 const props = defineProps<{
 	doctype: string
@@ -154,7 +155,7 @@ const doctypeLabel = computed(() => props.doctype)
 const listRoute = computed(() => listRouteFor(props.doctype) || "/")
 
 const crumbs = computed(() => [
-	...(props.parentCrumbs || []),
+	...(props.parentCrumbs || (isOrgMaster(props.doctype) ? [ORG_MASTER_CRUMB] : [])),
 	{ label: props.listLabel, route: listRoute.value },
 	{ label: props.page.isNew ? "New" : props.title || props.page.doc.value.name || "" },
 ])

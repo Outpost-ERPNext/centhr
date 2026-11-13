@@ -4,8 +4,7 @@
 		class="flex flex-wrap items-center justify-between gap-3 border-t border-ch-line px-5 py-3 text-[13px] text-ch-ink-3"
 	>
 		<div class="flex items-center gap-2">
-			<span class="hidden sm:inline">Rows</span>
-			<div class="inline-flex rounded-3 bg-ch-subtle p-0.5" role="group" aria-label="Rows per page">
+			<div class="inline-flex rounded-3 bg-ch-subtle p-0.5" role="group" aria-label="Rows per load">
 				<button
 					v-for="size in sizes"
 					:key="size"
@@ -17,26 +16,11 @@
 					{{ size }}
 				</button>
 			</div>
+			<Button v-if="shown < total" size="sm" variant="subtle" @click="$emit('update:page', page + 1)">
+				Load More
+			</Button>
 		</div>
-		<div class="flex items-center gap-2">
-			<span class="tabular-nums">{{ from }}–{{ to }} of {{ total }}</span>
-			<Button
-				size="sm"
-				variant="ghost"
-				icon="lucide-chevron-left"
-				aria-label="Previous page"
-				:disabled="page <= 1"
-				@click="$emit('update:page', page - 1)"
-			/>
-			<Button
-				size="sm"
-				variant="ghost"
-				icon="lucide-chevron-right"
-				aria-label="Next page"
-				:disabled="to >= total"
-				@click="$emit('update:page', page + 1)"
-			/>
-		</div>
+		<span class="tabular-nums">{{ shown }} of {{ total }}</span>
 	</div>
 </template>
 
@@ -44,10 +28,10 @@
 import { computed } from "vue"
 import { Button } from "frappe-ui"
 
+/** `page` is the number of chunks loaded; the list shows `page * pageSize` rows. */
 const props = defineProps<{ total: number; page: number; pageSize: number }>()
 defineEmits<{ "update:page": [page: number]; "update:pageSize": [size: number] }>()
 
-const sizes = [10, 20, 50]
-const from = computed(() => (props.page - 1) * props.pageSize + 1)
-const to = computed(() => Math.min(props.page * props.pageSize, props.total))
+const sizes = [50, 100, 500, 2500]
+const shown = computed(() => Math.min(props.page * props.pageSize, props.total))
 </script>

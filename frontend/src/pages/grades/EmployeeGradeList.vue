@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Grade' }]">
+	<PageHeader :crumbs="[{ label: 'Org Master', route: '/org-master' }, { label: 'Grade' }]">
 		<template #actions>
 			<Button
 				v-if="can('Employee Grade').create"

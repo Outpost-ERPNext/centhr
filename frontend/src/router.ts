@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Cost Center", "Channel", "Employment Type", "Gender", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -21,10 +21,16 @@ const routes: RouteRecordRaw[] = [
 		meta: { public: true },
 	},
 	{
+		path: "/architecture",
+		name: "Architecture",
+		component: () => import("@/pages/architecture/Architecture.vue"),
+	},
+	{
 		path: "/",
 		component: () => import("@/components/layout/AppLayout.vue"),
 		children: [
 			{ path: "", name: "Dashboard", component: () => import("@/pages/Dashboard.vue") },
+			{ path: "org-master", name: "OrgMaster", component: () => import("@/pages/org-master/OrgMaster.vue") },
 			...docRoutes(
 				"employees",
 				"Employee",
@@ -102,6 +108,30 @@ const routes: RouteRecordRaw[] = [
 				"Designation",
 				() => import("@/pages/designations/DesignationList.vue"),
 				() => import("@/pages/designations/DesignationDetail.vue")
+			),
+			...docRoutes(
+				"cost-centers",
+				"CostCenter",
+				() => import("@/pages/cost-centers/CostCenterList.vue"),
+				() => import("@/pages/cost-centers/CostCenterDetail.vue")
+			),
+			...docRoutes(
+				"channels",
+				"Channel",
+				() => import("@/pages/channels/ChannelList.vue"),
+				() => import("@/pages/channels/ChannelDetail.vue")
+			),
+			...docRoutes(
+				"employment-types",
+				"EmploymentType",
+				() => import("@/pages/employment-types/EmploymentTypeList.vue"),
+				() => import("@/pages/employment-types/EmploymentTypeDetail.vue")
+			),
+			...docRoutes(
+				"genders",
+				"Gender",
+				() => import("@/pages/genders/GenderList.vue"),
+				() => import("@/pages/genders/GenderDetail.vue")
 			),
 			...docRoutes(
 				"salary-structure-assignments",

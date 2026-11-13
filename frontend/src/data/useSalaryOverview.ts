@@ -16,7 +16,7 @@ const DEFAULTS = {
 	sort: "name",
 	order: "asc" as "asc" | "desc",
 	page: 1,
-	pageSize: 20,
+	pageSize: 50,
 }
 type State = typeof DEFAULTS
 const FILTER_KEYS = ["company", "tile", "view", "search", "department", "structure", "employee", "pageSize"] as const
@@ -51,7 +51,7 @@ export function useSalaryOverview(page: string) {
 			.filter((r) => !state.employee || r.name === state.employee)
 			.sort((a, b) => compareRows(a, b, state.sort) * (state.order === "asc" ? 1 : -1))
 	})
-	const pageRows = computed(() => filtered.value.slice((state.page - 1) * state.pageSize, state.page * state.pageSize))
+	const pageRows = computed(() => filtered.value.slice(0, state.page * state.pageSize))
 	const hasFilters = computed(() => !!(state.search || state.department || state.structure || state.employee || state.view !== "all"))
 
 	watch(

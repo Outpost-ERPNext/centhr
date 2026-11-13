@@ -102,6 +102,7 @@ after_install = [
 	"centhr.customization.payroll_entry.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
 	"centhr.customization.attendance_request.setup_attendance_approval",
+	"centhr.customization.holiday_list.create_custom_fields",
 ]
 after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
@@ -109,13 +110,17 @@ after_migrate = [
 	"centhr.customization.payroll_entry.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
 	"centhr.customization.attendance_request.setup_attendance_approval",
+	"centhr.customization.holiday_list.create_custom_fields",
 ]
 
 # Uninstallation
 # ------------
 
 # before_uninstall = "centhr.uninstall.before_uninstall"
-after_uninstall = "centhr.customization.employee.delete_custom_fields"
+after_uninstall = [
+	"centhr.customization.employee.delete_custom_fields",
+	"centhr.customization.holiday_list.delete_custom_fields",
+]
 
 # Integration Setup
 # ------------------
@@ -175,20 +180,33 @@ after_uninstall = "centhr.customization.employee.delete_custom_fields"
 # 	}
 # }
 
-doctype_js = {"Employee": "public/js/employee.js"}
+doctype_js = {"Employee": "public/js/employee.js", "Holiday List": "public/js/holiday_list.js"}
 
 doc_events = {
+	"Holiday List": {
+		"validate": "centhr.api.holiday_list.validate_active",
+		"on_update": "centhr.api.holiday_list.apply_active_list",
+	},
 	"Employee": {
-		"validate": "centhr.customization.employee.validate_cross_company",
+		"validate": [
+			"centhr.customization.employee.validate_cross_company",
+			"centhr.api.holiday_list.set_employee_holiday_list",
+		],
 		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
 		"on_update": [
 			"centhr.role_management.cross_company_role.sync_cross_company_permissions",
+			"centhr.api.employee_salary.sync_salary_structure_assignment",
 			"centhr.api.update.employee.enqueue_employee_update",
 		],
 		"on_trash": [
 			"centhr.role_management.cross_company_role.remove_cross_company_permissions",
 			"centhr.api.delete.employee.enqueue_employee_delete",
 		],
+	},
+	"Department": {
+		"after_insert": "centhr.api.department.enqueue_department_sync",
+		"on_update": "centhr.api.department.enqueue_department_update",
+		"on_trash": "centhr.api.department.enqueue_department_delete",
 	},
 	"Leave Application": {
 		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",

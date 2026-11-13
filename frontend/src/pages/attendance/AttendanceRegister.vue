@@ -224,7 +224,7 @@ const pendingEmployees = ref<{ leave: string[]; request: string[] }>({ leave: []
 const fromDate = ref("")
 const toDate = ref("")
 const page = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(50)
 const loading = ref(true)
 const employees = ref<{ name: string; employee_name: string; date_of_joining: string }[]>([])
 const employeeTotal = ref(0)
@@ -403,12 +403,12 @@ async function load() {
 				filters: empFilters,
 				or_filters: empOrFilters,
 				order_by: "employee_name asc",
-				start: (page.value - 1) * pageSize.value,
-				limit: pageSize.value,
+				start: 0,
+				limit: page.value * pageSize.value,
 			}),
 			getCount("Employee", empFilters, empOrFilters),
 		])
-		// Only this page of employees
+		// Only the employees shown
 		const holidayRequest = emps.length
 			? api<Record<string, Record<string, boolean>>>(
 					"centhr.api.attendance.get_holidays_for_employees",
