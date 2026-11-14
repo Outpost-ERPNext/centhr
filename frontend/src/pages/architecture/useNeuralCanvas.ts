@@ -6,6 +6,8 @@ import { EDGE_STYLES, type GraphEdge, type GraphNode, type NodeKind } from "./to
 const COMPANY_RING = 300
 const PROCESS_RING = 92
 const MODULE_ORBIT = 112
+/** Arc the modules of a company fan out over, wide enough for eight without overlap */
+const MODULE_ARC = Math.PI * 1.4
 const LAYER_GAP = 300
 const ROW_GAP = 72
 const MIN_ZOOM = 0.4
@@ -118,10 +120,10 @@ export function useNeuralCanvas(canvas: Ref<HTMLCanvasElement | null>) {
 		for (const company of layout === "radial" ? nodes.filter((n) => n.kind === "company") : []) {
 			const modules = nodes.filter((n) => n.kind === "module" && n.company === company.company)
 			const base = angleOf.get(company.company!)!
-			const spread = (Math.PI * 1.15) / Math.max(modules.length - 1, 1)
+			const spread = MODULE_ARC / Math.max(modules.length - 1, 1)
 			modules.forEach((m, i) => {
 				const jitter = (hash(m.id + "j") - 0.5) * 0.22
-				const angle = base - (Math.PI * 1.15) / 2 + i * spread + jitter
+				const angle = base - MODULE_ARC / 2 + i * spread + jitter
 				const dist = MODULE_ORBIT * (0.86 + hash(m.id + "d") * 0.28)
 				m.pos = add(company.pos, polar(angle, dist))
 				m.dormant = add(company.pos, polar(angle, 30))

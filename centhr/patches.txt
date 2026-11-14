@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 centhr.patches.make_api_logger_errors_readable
 centhr.patches.rename_employees_with_company_abbr
+centhr.patches.v1_0.rebuild_iou_approval_workflow

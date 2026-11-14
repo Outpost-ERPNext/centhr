@@ -7,7 +7,20 @@
  "field_order": [
   "authorization",
   "error_alerts",
-  "default_view"
+  "default_view",
+  "iou_tab",
+  "iou_finance_1",
+  "iou_finance_2",
+  "iou_salary_component",
+  "iou_column_break",
+  "iou_travel_grace_days",
+  "iou_other_due_days",
+  "iou_due_reminder_days",
+  "iou_payroll_notice_days",
+  "iou_payroll_day",
+  "iou_escalation_hours",
+  "iou_proxy_section",
+  "iou_proxies"
  ],
  "fields": [
   {
@@ -28,13 +41,98 @@
    "fieldtype": "Select",
    "label": "Default View",
    "options": "\nCentHR\nERPNext"
+  },
+  {
+   "fieldname": "iou_tab",
+   "fieldtype": "Tab Break",
+   "label": "IOU"
+  },
+  {
+   "fieldname": "iou_finance_1",
+   "fieldtype": "Link",
+   "label": "Finance 1 (Finance Controller)",
+   "options": "User",
+   "description": "Approves IOU applications and claims after the HOD, and pays claim amounts from pocket."
+  },
+  {
+   "fieldname": "iou_finance_2",
+   "fieldtype": "Link",
+   "label": "Finance 2 (Payment Approver)",
+   "options": "User",
+   "description": "Pays approved IOUs. Must be a different user from Finance 1."
+  },
+  {
+   "fieldname": "iou_salary_component",
+   "fieldtype": "Link",
+   "label": "IOU Recovery Salary Component",
+   "options": "Salary Component",
+   "description": "Deduction component used to recover overdue IOUs from salary."
+  },
+  {
+   "fieldname": "iou_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "7",
+   "fieldname": "iou_travel_grace_days",
+   "fieldtype": "Int",
+   "label": "Travel: Days After Tenure to Settle",
+   "non_negative": 1
+  },
+  {
+   "default": "5",
+   "fieldname": "iou_other_due_days",
+   "fieldtype": "Int",
+   "label": "Other: Days After Payment to Settle",
+   "non_negative": 1
+  },
+  {
+   "default": "3",
+   "fieldname": "iou_due_reminder_days",
+   "fieldtype": "Int",
+   "label": "Reminder Days Before Due Date",
+   "non_negative": 1
+  },
+  {
+   "default": "7",
+   "fieldname": "iou_payroll_notice_days",
+   "fieldtype": "Int",
+   "label": "Salary Deduction Notice Days Before Payroll",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "iou_payroll_day",
+   "fieldtype": "Int",
+   "label": "Payroll Day of Month",
+   "non_negative": 1,
+   "description": "Day of the month payroll runs. 0 = last day of the month."
+  },
+  {
+   "default": "24",
+   "fieldname": "iou_escalation_hours",
+   "fieldtype": "Int",
+   "label": "Hours Before Proxy Is Notified",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "iou_proxy_section",
+   "fieldtype": "Section Break",
+   "label": "Proxy Approvers"
+  },
+  {
+   "fieldname": "iou_proxies",
+   "fieldtype": "Table",
+   "label": "Proxies",
+   "options": "IOU Proxy",
+   "description": "A proxy can approve, reject and modify in place of the approver, and is notified when the approver has not acted in time."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-15 20:43:21.683653",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "CentHr Settings",

@@ -1,7 +1,8 @@
 # Copyright (c) 2026, Outpost Work LLP and contributors
 # For license information, please see license.txt
 
-"""Shared code for the Leave Allocation, Employee Checkin and Shift Type APIs.
+"""Shared code for the Leave Allocation, Employee Checkin, Shift Type and IOU (Employee Advance,
+Expense Claim, Payment Entry) APIs.
 
 The files in centhr/api/post, update and delete hold the hooks and background jobs of each
 doctype and call `enqueue_job`, `sync_record` and `delete_record` from here.
@@ -17,6 +18,7 @@ import frappe
 from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 
+from centhr.api.common.remote_links import RemoteLinks
 from centhr.api.common.target_client import TargetClient
 from centhr.api.post.employee import CentHRSyncError, get_field_values
 
@@ -25,12 +27,104 @@ MIGRATE_MODULE_PREFIX = "centhr.api.migrate."
 
 # exclude: links to local records that are not synced, so their names mean nothing on the target
 # match_by_name: the record has the same name on every system
+# submitted_only: drafts are not sent; the record goes to the target when it is submitted
+# links: {fieldname: doctype}, sent with the target's name of the linked record (see RemoteLinks)
+# dynamic_links: {fieldname: field that holds the doctype}
+# tables: {table fieldname: {"exclude", "links", "dynamic_links"}} for the rows of a child table
+
+# The IOU workflow, its approvers and the payment advice belong to this site. The entity site starts
+# the record in its own first workflow state, and its submit moves it to the submitted state.
+IOU_LOCAL_FIELDS = (
+	"workflow_state",
+	"line_manager",
+	"current_approver",
+	"proxy_approver",
+	"hod_approved_by",
+	"finance_1_approved_by",
+	"finance_2_approved_by",
+	"rejected_by",
+	"pending_since",
+	"escalated_at",
+	"payment_advice",
+)
+ACCOUNTING_LINKS = {"cost_center": "Cost Center", "department": "Department"}
+
 SYNC_CONFIG = {
 	"Leave Allocation": {
 		"exclude": ("compensatory_request", "leave_period", "leave_policy", "leave_policy_assignment"),
 	},
 	"Employee Checkin": {"exclude": ("attendance",)},
 	"Shift Type": {"exclude": (), "match_by_name": True},
+	"Employee Advance": {
+		"submitted_only": True,
+		# The entity site sets the paid, claimed and returned amounts from its own Payment Entries and
+		# claims. Copied amounts would make its Payment Entry see the advance as paid already.
+		"exclude": (
+			*IOU_LOCAL_FIELDS,
+			"paid_amount",
+			"claimed_amount",
+			"return_amount",
+			"pending_amount",
+			"status",
+		),
+		"links": {"advance_account": "Account", **ACCOUNTING_LINKS},
+	},
+	"Expense Claim": {
+		"submitted_only": True,
+		# The entity site sets the reimbursed amount and status from its own Payment Entries
+		"exclude": (
+			*IOU_LOCAL_FIELDS,
+			"expense_approver",
+			"vehicle_log",
+			"delivery_trip",
+			"task",
+			"total_amount_reimbursed",
+			"status",
+		),
+		"links": {
+			"payable_account": "Account",
+			"bank_or_cash_account": "Account",
+			"gain_loss_account": "Account",
+			**ACCOUNTING_LINKS,
+		},
+		"tables": {
+			"expenses": {"links": {"default_account": "Account", **ACCOUNTING_LINKS}},
+			"taxes": {"links": {"account_head": "Account", **ACCOUNTING_LINKS}},
+			"advances": {
+				"links": {"employee_advance": "Employee Advance", "advance_account": "Account"},
+				"dynamic_links": {"reference_name": "reference_type"},
+			},
+		},
+	},
+	"Payment Entry": {
+		"submitted_only": True,
+		# Bank Accounts, contacts and withholding entries are local records or made by the target's submit
+		"exclude": (
+			"status",
+			"bank_account",
+			"party_bank_account",
+			"contact_person",
+			"payment_order",
+			"auto_repeat",
+			"letter_head",
+			"print_heading",
+			"tax_withholding_entries",
+		),
+		"links": {"paid_from": "Account", "paid_to": "Account", "cost_center": "Cost Center"},
+		"dynamic_links": {"party": "party_type"},
+		"tables": {
+			"references": {
+				"exclude": ("payment_request",),
+				"links": {"account": "Account"},
+				"dynamic_links": {
+					"reference_name": "reference_doctype",
+					"advance_voucher_no": "advance_voucher_type",
+				},
+			},
+			"taxes": {"links": {"account_head": "Account", "cost_center": "Cost Center"}},
+			"deductions": {"links": {"account": "Account", "cost_center": "Cost Center"}},
+		},
+	},
 }
 
 
@@ -40,6 +134,14 @@ def enqueue_job(method: str, doc, **kwargs) -> None:
 		return
 
 	frappe.enqueue(method, queue="short", enqueue_after_commit=True, **kwargs)
+
+
+def is_unsent_draft(doc) -> bool:
+	"""A draft of a submitted_only doctype. Its sync job is not needed.
+
+	A draft that is on the target (migrated from it) is skipped as well: only a submit changes it there.
+	"""
+	return doc.docstatus == 0 and SYNC_CONFIG.get(doc.doctype, {}).get("submitted_only", False)
 
 
 def sync_record(doctype: str, name: str) -> None:
@@ -67,6 +169,7 @@ class RecordSync:
 		self.doc = doc
 		self.config = SYNC_CONFIG[ref.doctype]
 		self.client = TargetClient(target, ref)
+		self.links = RemoteLinks(self)
 
 	def upsert(self) -> None:
 		doc = self.doc
@@ -75,6 +178,8 @@ class RecordSync:
 		if not remote:
 			if doc.docstatus == 2:
 				# cancelled before it ever reached the target
+				return
+			if doc.docstatus == 0 and self.config.get("submitted_only"):
 				return
 			self.client.insert(doc.doctype, self.build_payload())
 			return
@@ -120,7 +225,24 @@ class RecordSync:
 		if doc.get("employee"):
 			payload["employee"] = self.get_remote_employee(doc.employee)
 
+		self.map_links(payload, self.config)
+		for table, table_config in self.config.get("tables", {}).items():
+			for row in payload.get(table) or ():
+				for fieldname in table_config.get("exclude", ()):
+					row.pop(fieldname, None)
+				self.map_links(row, table_config)
+
 		return frappe.parse_json(frappe.as_json(payload))
+
+	def map_links(self, values: dict, config: dict) -> None:
+		"""Replaces the local names in the link fields of `config` with the target's names."""
+		for fieldname, doctype in config.get("links", {}).items():
+			if values.get(fieldname):
+				values[fieldname] = self.links.get(doctype, values[fieldname])
+
+		for fieldname, doctype_field in config.get("dynamic_links", {}).items():
+			if values.get(fieldname):
+				values[fieldname] = self.links.get(values.get(doctype_field), values[fieldname])
 
 	def get_update_after_submit_values(self) -> dict:
 		# a submitted record on the target only accepts changes to "Allow on Submit" fields
@@ -135,16 +257,17 @@ class RecordSync:
 		data = self.client.get_list(self.ref.doctype, [["name", "=", remote_name]], ["name", "docstatus"])
 		return frappe._dict(data[0]) if data else None
 
-	def get_synced_name(self, name: str) -> str | None:
-		return self.get_pushed_name(name) or self.get_migrated_name(name)
+	def get_synced_name(self, name: str, doctype: str | None = None) -> str | None:
+		return self.get_pushed_name(name, doctype) or self.get_migrated_name(name, doctype)
 
-	def get_pushed_name(self, name: str) -> str | None:
+	def get_pushed_name(self, name: str, doctype: str | None = None) -> str | None:
+		doctype = doctype or self.ref.doctype
 		return frappe.db.get_value(
 			"CentHR API Logger",
 			{
-				"doctypes": self.ref.doctype,
+				"doctypes": doctype,
 				"reference_name": name,
-				"endpoint": self.client.url(self.ref.doctype),
+				"endpoint": self.client.url(doctype),
 				"request_method": "POST",
 				"status": "Success",
 				"target_reference": ("is", "set"),
@@ -153,12 +276,12 @@ class RecordSync:
 			order_by="creation desc",
 		)
 
-	def get_migrated_name(self, name: str) -> str | None:
+	def get_migrated_name(self, name: str, doctype: str | None = None) -> str | None:
 		# the migration tool logs the CentHR name as reference_name and the local name as target_reference
 		return frappe.db.get_value(
 			"CentHR API Logger",
 			{
-				"doctypes": self.ref.doctype,
+				"doctypes": doctype or self.ref.doctype,
 				"target_reference": name,
 				"company": self.client.target.company,
 				"sync_method": ("like", f"{MIGRATE_MODULE_PREFIX}%"),

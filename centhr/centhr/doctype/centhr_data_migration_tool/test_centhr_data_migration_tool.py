@@ -9,7 +9,10 @@ from frappe.tests import IntegrationTestCase
 from centhr.api.migrate.account import AccountMigrator
 from centhr.api.migrate.client import PAGE_LENGTH, MigrationError, TargetClient
 from centhr.api.migrate.cost_center import CostCenterMigrator
+from centhr.api.migrate.employee_advance import EmployeeAdvanceMigrator
+from centhr.api.migrate.expense_claim import ExpenseClaimMigrator
 from centhr.api.migrate.leave_type import LeaveTypeMigrator
+from centhr.api.migrate.payment_entry import PaymentEntryMigrator
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 # The tests mock the CentHR site and use an existing Company, so no test records are needed
@@ -273,3 +276,60 @@ class IntegrationTestCenthrDataMigrationTool(IntegrationTestCase):
 		self.assertEqual(first.status, "Success")
 		self.assertEqual(frappe.db.get_value("Cost Center", first.local_name, "parent_cost_center"), root)
 		self.assertEqual(second.status, "Already Exists")
+
+	def test_advance_and_claim_sections_are_registered(self):
+		from centhr.centhr.doctype.centhr_data_migration_tool.centhr_data_migration_tool import MIGRATORS
+
+		self.assertIs(MIGRATORS["employee_advance"], EmployeeAdvanceMigrator)
+		self.assertIs(MIGRATORS["expense_claim"], ExpenseClaimMigrator)
+
+	def test_advance_and_claim_filters(self):
+		filters = frappe._dict(from_date="2026-01-01", to_date="2026-01-31", status="All")
+		for migrator_class in (EmployeeAdvanceMigrator, ExpenseClaimMigrator):
+			migrator = migrator_class(TEST_COMPANY)
+			self.assertEqual(
+				migrator.get_section_filters(filters),
+				[["posting_date", ">=", "2026-01-01"], ["posting_date", "<=", "2026-01-31"]],
+			)
+			self.assertIn(["status", "=", "Paid"], migrator.get_section_filters(frappe._dict(status="Paid")))
+
+	def test_claim_needs_payment_of_its_advance(self):
+		migrator = ExpenseClaimMigrator(TEST_COMPANY)
+		row = {
+			"employee_advance": "HR-EAD-404",
+			"allocated_amount": 100,
+			"reference_type": "Payment Entry",
+			"reference_name": "_Test CentHR Missing Payment",
+		}
+		self.assertRaises(MigrationError, migrator.check_advance_payment, row)
+		# A row that takes nothing from the advance books no entry against its payment
+		migrator.check_advance_payment({**row, "allocated_amount": 0})
+
+	def test_payment_entry_section_is_registered(self):
+		from centhr.centhr.doctype.centhr_data_migration_tool.centhr_data_migration_tool import MIGRATORS
+
+		self.assertIs(MIGRATORS["payment_entry"], PaymentEntryMigrator)
+
+	def test_payment_entry_filters(self):
+		migrator = PaymentEntryMigrator(TEST_COMPANY)
+		filters = frappe._dict(
+			from_date="2026-01-01", to_date="2026-01-31", payment_type="All", party_type="Employee"
+		)
+		self.assertEqual(
+			migrator.get_section_filters(filters),
+			[
+				["posting_date", ">=", "2026-01-01"],
+				["posting_date", "<=", "2026-01-31"],
+				["party_type", "=", "Employee"],
+			],
+		)
+		self.assertIn(["payment_type", "=", "Pay"], migrator.get_section_filters(frappe._dict(payment_type="Pay")))
+
+	def test_payment_entry_needs_its_references(self):
+		migrator = PaymentEntryMigrator(TEST_COMPANY)
+		row = {"reference_doctype": "Employee Advance", "reference_name": "_Test CentHR Missing Advance"}
+		self.assertRaises(MigrationError, migrator.check_reference, row)
+
+	def test_payment_entry_needs_its_party(self):
+		migrator = PaymentEntryMigrator(TEST_COMPANY)
+		self.assertRaises(MigrationError, migrator.get_party, "Supplier", "_Test CentHR Missing Supplier")

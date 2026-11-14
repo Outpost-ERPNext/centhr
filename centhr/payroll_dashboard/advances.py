@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from hrms.hr.doctype.employee_advance.employee_advance import create_return_through_additional_salary
 
+from centhr.iou.advance import outstanding
 from centhr.payroll_dashboard.scope import Scope
 
 
@@ -17,7 +18,7 @@ def get_pending_advances(scope: Scope) -> list:
 		return []
 	rows = frappe.get_list(
 		"Employee Advance",
-		filters={**scope.company_filter, "docstatus": 1, "pending_amount": [">", 0]},
+		filters={**scope.company_filter, "docstatus": 1, "paid_amount": [">", 0]},
 		fields=[
 			"name",
 			"employee",
@@ -44,7 +45,10 @@ def get_pending_advances(scope: Scope) -> list:
 			pluck="ref_docname",
 		)
 	)
+	# HRMS's pending_amount is what is still to be paid out, not what is still to be settled
+	rows = [row for row in rows if outstanding(row) > 0]
 	for row in rows:
+		row.pending_amount = outstanding(row)
 		row.overdue = row.posting_date and frappe.utils.getdate(row.posting_date) <= scope.to_date
 		row.recovery_scheduled = row.name in recovering
 	return rows
@@ -73,8 +77,15 @@ def recover_advance(advance: str, salary_component: str, payroll_date: str) -> s
 	doc.check_permission("read")
 	if not doc.repay_unclaimed_amount_from_salary:
 		frappe.throw(_("Tick Repay Unclaimed Amount from Salary on {0} to recover it through payroll.").format(advance))
+	return create_salary_recovery(doc, salary_component, payroll_date, outstanding(doc))
+
+
+def create_salary_recovery(doc, salary_component: str, payroll_date, amount: float, ignore_permissions: bool = False) -> str:
+	"""Submits an Additional Salary deduction for the advance. The salary slip then reduces the net pay,
+	and HRMS records the deduction as a return on the advance."""
 	additional = create_return_through_additional_salary(doc)
-	additional.update({"salary_component": salary_component, "payroll_date": payroll_date, "amount": doc.pending_amount})
+	additional.update({"salary_component": salary_component, "payroll_date": payroll_date, "amount": amount})
+	additional.flags.ignore_permissions = ignore_permissions
 	additional.insert()
 	additional.submit()
 	return additional.name

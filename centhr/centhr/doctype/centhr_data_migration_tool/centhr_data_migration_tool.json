@@ -142,7 +142,44 @@
   "payroll_entry_fetch",
   "payroll_entry_records_section",
   "payroll_entry_summary",
-  "payroll_entry_table"
+  "payroll_entry_table",
+  "employee_advance_tab",
+  "employee_advance_filters_section",
+  "employee_advance_from_date",
+  "employee_advance_to_date",
+  "employee_advance_column_break_1",
+  "employee_advance_employee",
+  "employee_advance_status",
+  "employee_advance_column_break_fetch",
+  "employee_advance_fetch",
+  "employee_advance_records_section",
+  "employee_advance_summary",
+  "employee_advance_table",
+  "payment_entry_tab",
+  "payment_entry_filters_section",
+  "payment_entry_from_date",
+  "payment_entry_to_date",
+  "payment_entry_column_break_1",
+  "payment_entry_employee",
+  "payment_entry_payment_type",
+  "payment_entry_party_type",
+  "payment_entry_column_break_fetch",
+  "payment_entry_fetch",
+  "payment_entry_records_section",
+  "payment_entry_summary",
+  "payment_entry_table",
+  "expense_claim_tab",
+  "expense_claim_filters_section",
+  "expense_claim_from_date",
+  "expense_claim_to_date",
+  "expense_claim_column_break_1",
+  "expense_claim_employee",
+  "expense_claim_status",
+  "expense_claim_column_break_fetch",
+  "expense_claim_fetch",
+  "expense_claim_records_section",
+  "expense_claim_summary",
+  "expense_claim_table"
  ],
  "fields": [
   {
@@ -833,13 +870,203 @@
    "fieldname": "payroll_entry_table",
    "fieldtype": "HTML",
    "label": "Records"
+  },
+  {
+   "fieldname": "employee_advance_tab",
+   "fieldtype": "Tab Break",
+   "label": "Employee Advance"
+  },
+  {
+   "fieldname": "employee_advance_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "employee_advance_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "employee_advance_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "employee_advance_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_advance_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "default": "All",
+   "fieldname": "employee_advance_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "All\nDraft\nPaid\nPartially Paid\nUnpaid\nClaimed\nReturned\nPartly Claimed and Returned"
+  },
+  {
+   "fieldname": "employee_advance_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_advance_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "employee_advance_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "employee_advance_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "employee_advance_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "payment_entry_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payment Entry"
+  },
+  {
+   "fieldname": "payment_entry_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "payment_entry_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "payment_entry_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "payment_entry_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_entry_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "default": "All",
+   "fieldname": "payment_entry_payment_type",
+   "fieldtype": "Select",
+   "label": "Payment Type",
+   "options": "All\nReceive\nPay\nInternal Transfer"
+  },
+  {
+   "default": "Employee",
+   "fieldname": "payment_entry_party_type",
+   "fieldtype": "Select",
+   "label": "Party Type",
+   "options": "All\nEmployee\nSupplier\nCustomer"
+  },
+  {
+   "fieldname": "payment_entry_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_entry_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "payment_entry_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "payment_entry_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "payment_entry_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "expense_claim_tab",
+   "fieldtype": "Tab Break",
+   "label": "Expense Claim"
+  },
+  {
+   "fieldname": "expense_claim_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "expense_claim_from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "expense_claim_to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "expense_claim_column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expense_claim_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "default": "All",
+   "fieldname": "expense_claim_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "All\nDraft\nPaid\nPartially Paid\nUnpaid\nRejected\nSubmitted"
+  },
+  {
+   "fieldname": "expense_claim_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expense_claim_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "expense_claim_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "expense_claim_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "expense_claim_table",
+   "fieldtype": "HTML",
+   "label": "Records"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-27 12:00:00.000000",
+ "modified": "2026-11-14 02:48:12.829158",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "Centhr Data Migration Tool",

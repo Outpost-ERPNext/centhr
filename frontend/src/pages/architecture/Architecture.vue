@@ -167,7 +167,7 @@
 import { computed, onMounted, ref } from "vue"
 import { readStorage, writeStorage } from "@/utils/storage"
 import { api } from "@/data/api"
-import { buildGraph, buildLayeredGraph, CORE, EDGE_STYLES, MODULES, PROCESSES, type GraphNode, type ModuleDef, type Site } from "./topology"
+import { buildGraph, buildLayeredGraph, CORE, EDGE_STYLES, MIGRATION_SECTIONS, MODULES, PROCESSES, type GraphNode, type ModuleDef, type Site } from "./topology"
 import { useNeuralCanvas, type Layout } from "./useNeuralCanvas"
 
 const VIEWS: { value: Layout; label: string; hint: string }[] = [
@@ -196,7 +196,7 @@ const status = computed(() => {
 const coreStats = computed(() => [
 	{ value: sites.value.length, label: "Sites" },
 	{ value: new Set(MODULES.flatMap((m) => m.pushes)).size, label: "Pushed doctypes" },
-	{ value: 15, label: "Migration sections" },
+	{ value: MIGRATION_SECTIONS.length, label: "Migration sections" },
 ])
 
 const tipStyle = computed(() => {

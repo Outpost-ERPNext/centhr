@@ -44,6 +44,7 @@
 		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-1">
 			<SidebarItem label="Dashboard" icon="lucide-layout-dashboard" route="/" :active="route.name === 'Dashboard'" @click="$emit('navigate')" />
 			<SidebarItem label="Architecture" icon="lucide-brain-circuit" route="/architecture" @click="$emit('navigate')" />
+			<SidebarItem label="Docs" icon="lucide-book-open" :href="DOCS_URL" target="_blank" rel="noopener" @click="$emit('navigate')" />
 			<SidebarSection
 				v-for="group in visibleGroups"
 				:key="group.label"
@@ -108,6 +109,9 @@ import { can } from "@/data/permissions"
 import { logout, session } from "@/data/session"
 import { ORG_MASTERS } from "@/data/orgMaster"
 import { readStorage, writeStorage } from "@/utils/storage"
+
+// The CentHR space in Frappe Wiki, on this same site
+const DOCS_URL = "/centhr-docs"
 
 defineProps<{ mobile?: boolean }>()
 defineEmits<{ navigate: [] }>()
@@ -182,6 +186,17 @@ const groups: { label: string; items: NavItem[] }[] = [
 					{ label: "Payroll Dashboard", icon: "lucide-layout-dashboard", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
 					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
 				],
+			},
+		],
+	},
+	{
+		label: "IOU",
+		items: [
+			{
+				label: "IOU Dashboard",
+				icon: "lucide-layout-dashboard",
+				route: "/iou/dashboard",
+				doctypes: ["IOU and Loans", "Employee Advance", "Expense Claim"],
 			},
 		],
 	},

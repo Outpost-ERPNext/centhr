@@ -14,11 +14,14 @@ from centhr.api.migrate.base import get_error_message
 from centhr.api.migrate.client import MigrationError
 from centhr.api.migrate.cost_center import CostCenterMigrator
 from centhr.api.migrate.employee import EmployeeMigrator
+from centhr.api.migrate.employee_advance import EmployeeAdvanceMigrator
+from centhr.api.migrate.expense_claim import ExpenseClaimMigrator
 from centhr.api.migrate.leave_allocation import LeaveAllocationMigrator
 from centhr.api.migrate.leave_application import LeaveApplicationMigrator
 from centhr.api.migrate.leave_policy import LeavePolicyMigrator
 from centhr.api.migrate.leave_policy_assignment import LeavePolicyAssignmentMigrator
 from centhr.api.migrate.leave_type import LeaveTypeMigrator
+from centhr.api.migrate.payment_entry import PaymentEntryMigrator
 from centhr.api.migrate.payroll_entry import PayrollEntryMigrator
 from centhr.api.migrate.salary_component import SalaryComponentMigrator
 from centhr.api.migrate.salary_slip import SalarySlipMigrator
@@ -33,6 +36,8 @@ STOPPED_EVENT = "centhr_migration_stopped"
 MIGRATORS = {
 	"account": AccountMigrator,
 	"cost_center": CostCenterMigrator,
+	"salary_component": SalaryComponentMigrator,
+	"salary_structure": SalaryStructureMigrator,
 	"employee": EmployeeMigrator,
 	"leave_type": LeaveTypeMigrator,
 	"leave_policy": LeavePolicyMigrator,
@@ -40,12 +45,13 @@ MIGRATORS = {
 	"leave_allocation": LeaveAllocationMigrator,
 	"leave_application": LeaveApplicationMigrator,
 	"attendance": AttendanceMigrator,
-	"salary_component": SalaryComponentMigrator,
-	"salary_structure": SalaryStructureMigrator,
 	"salary_structure_assignment": SalaryStructureAssignmentMigrator,
 	"additional_salary": AdditionalSalaryMigrator,
 	"salary_slip": SalarySlipMigrator,
 	"payroll_entry": PayrollEntryMigrator,
+	"employee_advance": EmployeeAdvanceMigrator,
+	"payment_entry": PaymentEntryMigrator,
+	"expense_claim": ExpenseClaimMigrator,
 }
 
 

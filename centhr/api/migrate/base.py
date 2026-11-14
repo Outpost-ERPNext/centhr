@@ -21,6 +21,7 @@ from centhr.api.migrate.tree_map import NAME_FIELDS, TreeMap
 LOGGER = "CentHR API Logger"
 CHUNK_SIZE = 1000
 SAVEPOINT = "centhr_migration"
+MASTER_SAVEPOINT = "centhr_migration_master"
 # Set by the CentHR site for its own records, or renumbered here
 SYSTEM_FIELDS = {
 	"name",
@@ -54,6 +55,10 @@ class Migrator:
 	duplicate_fields: tuple[str, ...]
 	# Links to records that get a new name here (naming series), so the old value would be wrong
 	cleared_fields: tuple[str, ...] = ()
+	# Fields that are mandatory here but may be empty on older CentHR records
+	optional_fields: tuple[str, ...] = ()
+	# Masters that are copied from the CentHR site when a record links to one that does not exist here
+	copied_masters: tuple[str, ...] = ()
 	title_field = "employee_name"
 	filter_by_company = True
 	order_by = "name asc"
@@ -66,6 +71,7 @@ class Migrator:
 		self.meta = frappe.get_meta(self.doctype)
 		self.remote = {}
 		self.notes = []
+		self.copying = set()
 
 	@classmethod
 	def get_sync_method(cls) -> str:
@@ -234,7 +240,7 @@ class Migrator:
 			if not value:
 				continue
 
-			local = self.get_local_link(df.options, value)
+			local = self.get_local_link(df.options, value) or self.copy_master(df.options, value)
 			if local:
 				values[df.fieldname] = local
 			elif df.reqd:
@@ -246,6 +252,87 @@ class Migrator:
 			else:
 				values[df.fieldname] = None
 				self.notes.append(_("{0} {1} not found, left empty").format(_(df.label), value))
+
+	def copy_master(self, doctype: str, name: str) -> str | None:
+		"""Create a missing master, e.g. the Designation of an Employee, as a copy of the CentHR record."""
+		if doctype not in self.copied_masters or (doctype, name) in self.copying:
+			return None
+
+		self.copying.add((doctype, name))
+		try:
+			local_name = self.insert_master(doctype, name)
+			self.log_master(doctype, name, local_name=local_name)
+			return local_name
+		except Exception as e:
+			error = get_error_message(e)
+			self.notes.append(_("Could not copy {0} {1}: {2}").format(_(doctype), name, error))
+			self.log_master(doctype, name, error=error)
+			return None
+		finally:
+			self.copying.discard((doctype, name))
+
+	def log_master(self, doctype: str, name: str, local_name: str | None = None, error: str | None = None) -> None:
+		"""Log a copied master on its own, so the API Logger lists it under its DocType."""
+		frappe.get_doc(
+			{
+				"doctype": LOGGER,
+				"doctypes": doctype,
+				"reference_name": name,
+				"name1": name,
+				"company": self.company,
+				"status": "Failed" if error else "Success",
+				"target_reference": local_name,
+				"error": error or _("Copied for {0} {1}").format(_(self.doctype), self.remote.get("name")),
+				"request_method": "GET",
+				"endpoint": self.client.get_url(doctype, name),
+			}
+		).insert(ignore_permissions=True)
+
+	def insert_master(self, doctype: str, name: str) -> str:
+		meta = frappe.get_meta(doctype)
+		values = self.strip(self.client.get_doc(doctype, name), meta, ("lft", "rgt", "old_parent"))
+		self.map_links(meta, values)
+		for df in meta.get_table_fields():
+			values[df.fieldname] = self.copy_rows(df.options, values.get(df.fieldname) or [])
+		self.clean_master(doctype, values)
+
+		# Each master is final on its own, so the record that needs it can still fail without undoing it
+		frappe.db.savepoint(MASTER_SAVEPOINT)
+		try:
+			doc = frappe.get_doc({"doctype": doctype, **values})
+			doc.flags.ignore_mandatory = True
+			doc.insert(ignore_permissions=True, set_name=name)
+		except Exception:
+			frappe.db.rollback(save_point=MASTER_SAVEPOINT)
+			raise
+		self.notes.append(_("{0} {1} copied from the CentHR site").format(_(doctype), doc.name))
+		return doc.name
+
+	def clean_master(self, doctype: str, values: dict) -> None:
+		"""Fix data that the CentHR site accepted and this site rejects."""
+		if doctype == "Holiday List":
+			holidays, dates = [], set()
+			for row in values.get("holidays") or []:
+				if row.get("holiday_date") in dates:
+					self.notes.append(_("Holiday {0} is listed twice on the CentHR site, kept once").format(row["holiday_date"]))
+					continue
+				dates.add(row.get("holiday_date"))
+				holidays.append(row)
+			values["holidays"] = holidays
+
+	def copy_rows(self, child_doctype: str, rows: list[dict]) -> list[dict]:
+		"""Rows of a copied master. A row that needs a record missing here, e.g. a User, is left out."""
+		child_meta = frappe.get_meta(child_doctype)
+		copied = []
+		for row in rows:
+			row = self.strip(row, child_meta)
+			try:
+				self.map_links(child_meta, row)
+			except MigrationError as e:
+				self.notes.append(str(e))
+				continue
+			copied.append(row)
+		return copied
 
 	def get_local_link(self, doctype: str, value: str) -> str | None:
 		if doctype == "Employee":
@@ -265,15 +352,28 @@ class Migrator:
 		# Keep the name of the CentHR site, so the record has the same ID on both sites
 		name = self.remote["name"]
 		if frappe.db.exists(self.doctype, name):
-			raise MigrationError(
-				_("{0} {1} already exists on this site as a different record").format(_(self.doctype), name)
+			if not self.remote.get("naming_series"):
+				raise MigrationError(
+					_("{0} {1} already exists on this site as a different record").format(_(self.doctype), name)
+				)
+			# A record made here took the name from the same series; keep the CentHR name with a suffix
+			name = next(
+				f"{self.remote['name']}-{suffix}"
+				for suffix in range(1, 1000)
+				if not frappe.db.exists(self.doctype, f"{self.remote['name']}-{suffix}")
 			)
 
 		frappe.db.savepoint(SAVEPOINT)
 		try:
 			doc = frappe.get_doc({"doctype": self.doctype, **values})
+			doc.flags.ignore_mandatory = any(not doc.get(fieldname) for fieldname in self.optional_fields)
 			doc.insert(ignore_permissions=True, set_name=name)
-			self.update_series(name)
+			if name == self.remote["name"]:
+				self.update_series(name)
+			else:
+				self.notes.append(
+					_("{0} is taken here by another record, created as {1}").format(self.remote["name"], doc.name)
+				)
 			if self.remote.get("docstatus") == 1:
 				doc.submit()
 		except Exception:

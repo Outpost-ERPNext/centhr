@@ -41,6 +41,8 @@ webform_include_js = {
 	"Employee Checkin": "public/js/web_form_otp.js",
 	"Leave Application": "public/js/web_form_otp.js",
 	"Attendance Request": "public/js/web_form_otp.js",
+	"Employee Advance": "public/js/web_form_otp.js",
+	"Expense Claim": "public/js/web_form_otp.js",
 }
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
@@ -100,16 +102,24 @@ after_install = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.customization.employee_advance.create_custom_fields",
+	"centhr.customization.expense_claim.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
 	"centhr.customization.attendance_request.setup_attendance_approval",
+	"centhr.customization.employee_advance_workflow.setup_employee_advance_approval",
+	"centhr.iou.setup.setup_iou",
 	"centhr.customization.holiday_list.create_custom_fields",
 ]
 after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.customization.employee_advance.create_custom_fields",
+	"centhr.customization.expense_claim.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
 	"centhr.customization.attendance_request.setup_attendance_approval",
+	"centhr.customization.employee_advance_workflow.setup_employee_advance_approval",
+	"centhr.iou.setup.setup_iou",
 	"centhr.customization.holiday_list.create_custom_fields",
 ]
 
@@ -120,6 +130,8 @@ after_migrate = [
 after_uninstall = [
 	"centhr.customization.employee.delete_custom_fields",
 	"centhr.customization.holiday_list.delete_custom_fields",
+	"centhr.customization.employee_advance.delete_custom_fields",
+	"centhr.customization.expense_claim.delete_custom_fields",
 ]
 
 # Integration Setup
@@ -226,6 +238,30 @@ doc_events = {
 		],
 		"after_insert": "centhr.api.web_form.attendance_request.after_insert",
 	},
+	"Employee Advance": {
+		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",
+		"after_insert": "centhr.api.post.employee_advance.enqueue_employee_advance_sync",
+		"on_update": "centhr.api.update.employee_advance.enqueue_employee_advance_update",
+		"on_cancel": "centhr.api.update.employee_advance.enqueue_employee_advance_update",
+		"on_update_after_submit": "centhr.api.update.employee_advance.enqueue_employee_advance_update",
+		"on_trash": "centhr.api.delete.employee_advance.enqueue_employee_advance_delete",
+	},
+	"Expense Claim": {
+		"before_insert": "centhr.api.otp.web_form.validate_web_form_otp",
+		"after_insert": "centhr.api.post.expense_claim.enqueue_expense_claim_sync",
+		"on_update": "centhr.api.update.expense_claim.enqueue_expense_claim_update",
+		"on_cancel": "centhr.api.update.expense_claim.enqueue_expense_claim_update",
+		"on_update_after_submit": "centhr.api.update.expense_claim.enqueue_expense_claim_update",
+		"on_trash": "centhr.api.delete.expense_claim.enqueue_expense_claim_delete",
+	},
+	# Only payments of IOUs, see centhr.api.post.payment_entry.is_iou_payment
+	"Payment Entry": {
+		"after_insert": "centhr.api.post.payment_entry.enqueue_payment_entry_sync",
+		"on_update": "centhr.api.update.payment_entry.enqueue_payment_entry_update",
+		"on_cancel": "centhr.api.update.payment_entry.enqueue_payment_entry_update",
+		"on_update_after_submit": "centhr.api.update.payment_entry.enqueue_payment_entry_update",
+		"on_trash": "centhr.api.delete.payment_entry.enqueue_payment_entry_delete",
+	},
 	"Leave Allocation": {
 		"after_insert": "centhr.api.post.leave_allocation.enqueue_leave_allocation_sync",
 		"on_update": "centhr.api.update.leave_allocation.enqueue_leave_allocation_update",
@@ -307,6 +343,11 @@ scheduler_events = {
 	"daily": [
 		"centhr.leave_policy.allocation.allocate_yearly_leaves",
 		"centhr.leave_policy.allocation.accrue_annual_leave",
+		"centhr.iou.scheduler.send_due_reminders",
+		"centhr.iou.scheduler.schedule_salary_recovery",
+	],
+	"hourly": [
+		"centhr.iou.scheduler.escalate_to_proxies",
 	],
 }
 
@@ -325,6 +366,8 @@ scheduler_events = {
 extend_doctype_class = {
 	"Leave Application": ["centhr.overrides.leave_application.CentHRLeaveApplication"],
 	"Attendance Request": ["centhr.overrides.attendance_request.CentHRAttendanceRequest"],
+	"Employee Advance": ["centhr.overrides.employee_advance.CentHREmployeeAdvance"],
+	"Expense Claim": ["centhr.overrides.expense_claim.CentHRExpenseClaim"],
 }
 
 # Overriding Methods

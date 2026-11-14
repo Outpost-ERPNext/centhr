@@ -1,0 +1,21 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("IOU Management") }}{% endblock %}
+
+{% block page_content %}
+<div class="iou-landing" style="max-width: 480px; margin: 3rem auto;">
+	<h2>{{ _("IOU Management") }}</h2>
+	<p class="text-muted">{{ _("Select the form you want to fill in.") }}</p>
+	<label for="iou-form" class="control-label">{{ _("Form") }}</label>
+	<select id="iou-form" class="form-control">
+		<option value="">{{ _("Select…") }}</option>
+		<option value="/iou-application">{{ _("IOU Application") }}</option>
+		<option value="/iou-claim">{{ _("IOU Claim Settlement") }}</option>
+	</select>
+</div>
+<script>
+	document.getElementById("iou-form").addEventListener("change", function () {
+		if (this.value) window.location.href = this.value;
+	});
+</script>
+{% endblock %}

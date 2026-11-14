@@ -80,12 +80,36 @@ export const CORE = {
 		{ title: "Authenticates and retries", text: "REST calls to /api/resource/<DocType> with token auth (api_key:api_secret), a (10, 30) s timeout, 2 retries and a Redis lock per record." },
 		{ title: "Logs every call", text: "One CentHR API Logger row per request: method, endpoint, HTTP status, payload and response. Failed calls can be resynced up to 3 times." },
 		{ title: "Alerts on failure", text: "Users in CentHr Settings > Error Alerts are notified when a sync fails." },
-		{ title: "Migrates data in", text: "The Data Migration Tool pages records from one company's site into CentHR under the same company, across 15 sections." },
-		{ title: "Runs HR processes locally", text: "Payroll runs, daily leave allocation and accrual, shift assignment, holiday lists and OTP-verified web forms." },
+		{ title: "Maps links per site", text: "A site can have its own chart of accounts. Accounts, Cost Centers, Departments and synced IOUs are matched to the site's own names before a push." },
+		{ title: "Migrates data in", text: "The Data Migration Tool pages records from one company's site into CentHR under the same company, across 18 sections." },
+		{ title: "Runs approvals", text: "Line managers approve attendance requests. IOUs go through HOD and Finance approval, with proxies and hourly escalation." },
+		{ title: "Runs HR processes locally", text: "Payroll runs with pre-audit checks, daily leave allocation and accrual, IOU reminders and salary recovery, shift assignment, holiday lists and OTP-verified web forms." },
 		{ title: "Cross-company roles", text: "Grants and removes User Permissions for managers who work across companies, on Employee update and delete." },
 	],
-	files: ["centhr/hooks.py", "centhr/api/common/target_client.py", "centhr/api/common/record_sync.py"],
+	files: ["centhr/hooks.py", "centhr/api/common/target_client.py", "centhr/api/common/record_sync.py", "centhr/api/common/remote_links.py"],
 }
+
+/** Sections of the Data Migration Tool, in run order (MIGRATORS in centhr_data_migration_tool.py) */
+export const MIGRATION_SECTIONS = [
+	"account",
+	"cost_center",
+	"salary_component",
+	"salary_structure",
+	"employee",
+	"leave_type",
+	"leave_policy",
+	"leave_policy_assignment",
+	"leave_allocation",
+	"leave_application",
+	"attendance",
+	"salary_structure_assignment",
+	"additional_salary",
+	"salary_slip",
+	"payroll_entry",
+	"employee_advance",
+	"payment_entry",
+	"expense_claim",
+]
 
 export const PROCESSES: ProcessDef[] = [
 	{
@@ -106,15 +130,25 @@ export const PROCESSES: ProcessDef[] = [
 		key: "migration",
 		label: "Migration Tool",
 		summary: "Centhr Data Migration Tool pulls records from a company's site, page by page (500 per page).",
-		points: ["Runs on the long queue, with realtime progress", "Each run writes a Centhr Data Log with per-record results", "Can be stopped while it runs"],
+		points: [
+			"18 sections, from Accounts and Cost Centers to IOUs, run in dependency order",
+			"Runs on the long queue, with realtime progress",
+			"Each run writes a Centhr Data Log with per-record results",
+			"Can be stopped while it runs",
+		],
 		files: ["centhr/api/migrate/", "centhr/centhr/doctype/centhr_data_migration_tool", "centhr/centhr/doctype/centhr_data_log"],
 	},
 	{
 		key: "scheduler",
-		label: "Leave Scheduler",
-		summary: "Daily jobs create Leave Allocations locally; each new allocation is then pushed by its own hook.",
-		points: ["allocate_yearly_leaves", "accrue_annual_leave"],
-		files: ["centhr/leave_policy/allocation.py"],
+		label: "Schedulers",
+		summary: "Scheduled jobs for leave and IOUs. Records they create or change are then pushed by their own hooks.",
+		points: [
+			"Daily: allocate_yearly_leaves, accrue_annual_leave",
+			"Daily: send_due_reminders for IOUs near or past their due date",
+			"Daily: schedule_salary_recovery of overdue IOUs",
+			"Hourly: escalate_to_proxies when an approver does not act",
+		],
+		files: ["centhr/leave_policy/allocation.py", "centhr/iou/scheduler.py"],
 	},
 ]
 
@@ -133,7 +167,11 @@ export const MODULES: ModuleDef[] = [
 			"Department: department_name, parent_department, company, is_group, disabled",
 		],
 		pull: ["Employee (migration section: employee)"],
-		local: ["Cross-company role permissions on update and delete", "Salary Structure Assignment created from Employee fields"],
+		local: [
+			"Cross-company role permissions on update and delete",
+			"Salary Structure Assignment created from Employee fields",
+			"Holiday list set from the active Holiday List of the company",
+		],
 		notSynced: [],
 		files: ["api/post/employee.py", "api/update/employee.py", "api/delete/employee.py", "api/department.py", "api/migrate/employee.py"],
 	},
@@ -149,7 +187,10 @@ export const MODULES: ModuleDef[] = [
 			"Shift Type: insert / update / delete, to every site (same name on both sides)",
 		],
 		pull: ["Attendance (migration section: attendance)"],
-		local: ["Attendance Request is OTP-verified and creates Attendance locally, which is then pushed"],
+		local: [
+			"Attendance Request is OTP-verified and approved by the line manager (Reports To), or by HR when there is none",
+			"An approved request creates Attendance locally, which is then pushed",
+		],
 		notSynced: ["Attendance Request", "Shift Assignment", "Holiday List"],
 		files: ["api/post/attendance.py", "api/delete/attendance.py", "api/post/shift_type.py", "api/web_form/attendance_request.py"],
 	},
@@ -182,9 +223,12 @@ export const MODULES: ModuleDef[] = [
 			"Additional Salary: matched by employee, salary_component, amount and payroll date",
 		],
 		pull: ["Payroll Entry", "Salary Slip", "Additional Salary"],
-		local: ["Payroll runs (entry → slips → bank entry) are generated in CentHR"],
+		local: [
+			"Payroll runs (entry → slips → bank entry) are generated in CentHR",
+			"Payroll Dashboard: pre-audit checks, salary overview and Excel export",
+		],
 		notSynced: ["Salary Slip is never pushed; the site creates its own"],
-		files: ["api/post/payroll_entry.py", "api/post/additional_salary.py", "api/payroll_run.py"],
+		files: ["api/post/payroll_entry.py", "api/post/additional_salary.py", "api/payroll_run.py", "payroll_dashboard/"],
 	},
 	{
 		key: "salary",
@@ -215,6 +259,41 @@ export const MODULES: ModuleDef[] = [
 		local: ["OTP-verified check-in web form", "after_insert marks Attendance in CentHR, which is then pushed"],
 		notSynced: ["No migration section"],
 		files: ["api/post/employee_checkin.py", "api/employee_checkin_attendance.py"],
+	},
+	{
+		key: "iou",
+		label: "IOU",
+		summary: "IOUs (Employee Advances), their claims and payments are approved in CentHR and kept in step on the company's site.",
+		doctypes: ["Employee Advance", "Expense Claim", "Payment Entry", "IOU and Loans"],
+		pushes: ["Employee Advance", "Expense Claim", "Payment Entry"],
+		hooks: ["insert", "update", "cancel", "trash"],
+		push: [
+			"Employee Advance and Expense Claim: after_insert → POST; update, submit, cancel and update after submit → PUT; on_trash → DELETE",
+			"Payment Entry: only IOU payments (party Employee, references only IOU documents)",
+			"Accounts, Cost Centers, Departments and the linked advance are mapped to the site's own names first",
+		],
+		pull: ["Employee Advance", "Expense Claim", "Payment Entry"],
+		local: [
+			"Approval workflow: HOD → Finance, with proxy approvers and hourly escalation",
+			"OTP-verified IOU application and IOU claim web forms",
+			"Due date reminders and salary recovery of overdue IOUs",
+			"IOU Dashboard and the IOU Advance reports",
+		],
+		notSynced: ["IOU and Loans, IOU Approver and IOU Proxy settings stay in CentHR", "Payment Entries that are not IOU payments"],
+		files: ["api/post/employee_advance.py", "api/post/expense_claim.py", "api/post/payment_entry.py", "api/common/remote_links.py", "iou/"],
+	},
+	{
+		key: "accounts",
+		label: "Accounts",
+		summary: "The chart of accounts and cost centers are pulled in from the site. They are never pushed.",
+		doctypes: ["Account", "Cost Center"],
+		pushes: [],
+		hooks: [],
+		push: [],
+		pull: ["Account", "Cost Center"],
+		local: ["Used to map ledger links on IOU pushes to the site's own account and cost center names"],
+		notSynced: ["Account and Cost Center are never pushed"],
+		files: ["api/migrate/account.py", "api/migrate/cost_center.py", "api/migrate/tree.py", "api/common/remote_links.py"],
 	},
 ]
 
@@ -261,21 +340,21 @@ export const HOOKS: ProcessDef[] = [
 		key: "insert",
 		label: "after_insert",
 		summary: "A new record is saved in CentHR. Its sync job is queued after the commit.",
-		points: ["HTTP effect: POST to /api/resource/<DocType>", "Employee, Department, Leave Allocation, Employee Checkin, Shift Type, salary and payroll doctypes"],
+		points: ["HTTP effect: POST to /api/resource/<DocType>", "Employee, Department, Leave Allocation, Employee Checkin, Shift Type, salary, payroll and IOU doctypes"],
 		files: ["centhr/hooks.py (doc_events)"],
 	},
 	{
 		key: "update",
 		label: "on_update / on_submit",
 		summary: "A record changes or is submitted. The record on the site is found and updated, or created if it is missing.",
-		points: ["HTTP effect: PUT (upsert)", "Attendance and Leave Application sync on_submit: POST with docstatus 1", "on_update_after_submit for allocations, salary and payroll doctypes"],
+		points: ["HTTP effect: PUT (upsert)", "Attendance and Leave Application sync on_submit: POST with docstatus 1", "on_update_after_submit for allocations, salary, payroll and IOU doctypes"],
 		files: ["centhr/hooks.py (doc_events)", "centhr/api/update/"],
 	},
 	{
 		key: "cancel",
 		label: "on_cancel",
 		summary: "A submitted record is cancelled in CentHR and cancelled on the site too.",
-		points: ["HTTP effect: PUT with docstatus 2", "Attendance, Leave Application, Leave Allocation, Salary Structure (+ Assignment), Additional Salary, Payroll Entry"],
+		points: ["HTTP effect: PUT with docstatus 2", "Attendance, Leave Application, Leave Allocation, Salary Structure (+ Assignment), Additional Salary, Payroll Entry, Employee Advance, Expense Claim, Payment Entry"],
 		files: ["centhr/hooks.py (doc_events)"],
 	},
 	{
@@ -295,6 +374,18 @@ export const ENGINE: ProcessDef[] = [
 		summary: "get_targets(company) picks the site for the record from CentHr Settings > Authorization.",
 		points: ["Matches the record's company (or its employee's company)", "Shift Type and Salary Component have no company, so they go once to every site"],
 		files: ["centhr/api/common/record_sync.py (get_targets)", "centhr/api/post/*.py (get_targets)"],
+	},
+	{
+		key: "links",
+		label: "Link Resolver",
+		summary: "Maps the links of a record to the names they have on the target site.",
+		points: [
+			"Account and Cost Center: by name, then with the site's abbreviation, then by account_name / cost_center_name",
+			"Department: by department_name and company",
+			"Synced IOUs (an advance a claim or payment uses): from the logged POST or migration",
+			"Results are cached for the job",
+		],
+		files: ["centhr/api/common/remote_links.py (RemoteLinks)"],
 	},
 	{
 		key: "client",
@@ -335,7 +426,8 @@ export function buildLayeredGraph(sites: Site[]) {
 	}
 	for (const hook of HOOKS) edges.push(internal(`hook:${hook.key}`, "process:queue", `${hook.label} → Job Queue`, "Enqueued on the short queue after the commit"))
 	edges.push(internal("process:queue", "process:router", "Job Queue → Router", "The job looks up the target site", 0.3))
-	edges.push(internal("process:router", "process:client", "Router → API Client", "One call per matching Authorization row", 0.3))
+	edges.push(internal("process:router", "process:links", "Router → Link Resolver", "One call per matching Authorization row", 0.3))
+	edges.push(internal("process:links", "process:client", "Link Resolver → API Client", "Links are mapped to the site's names before the call", 0.3))
 
 	for (const site of sites) {
 		const id = `company:${site.company}`
