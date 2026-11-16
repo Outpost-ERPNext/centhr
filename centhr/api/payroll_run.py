@@ -9,19 +9,27 @@ from frappe.utils import getdate
 PAYOUT_VOUCHER_TYPES = ["Bank Entry", "Cash Entry"]
 
 
-class PayrollGenerator:
-	"""Creates and submits the monthly Payroll Entry of a period."""
+BATCHES = ("Regular", "Exited")
 
-	def __init__(self, company: str, start_date: str, end_date: str):
+
+class PayrollGenerator:
+	"""Creates and submits a monthly Payroll Entry of a period: the Regular batch for employees still
+	with the company, or the Exited batch for those whose relieving date is in the period."""
+
+	def __init__(self, company: str, start_date: str, end_date: str, batch: str = "Regular"):
+		if batch not in BATCHES:
+			frappe.throw(_("Unknown payroll batch {0}.").format(batch))
 		self.company = company
 		self.start_date = getdate(start_date)
 		self.end_date = getdate(end_date)
+		self.batch = batch
 
 	def run(self) -> str:
 		self.check_no_entry_exists()
 		# Insert first, as Desk does: the employee query reads defaults that insert sets
 		entry = self.make_entry().insert()
 		entry.fill_employee_details()
+		self.keep_batch_employees(entry)
 		entry.submit()
 		return entry.name
 
@@ -39,6 +47,7 @@ class PayrollGenerator:
 			{
 				"doctype": "Payroll Entry",
 				"company": self.company,
+				"centhr_batch": self.batch,
 				# The accrual is booked at the end of the period it pays for
 				"posting_date": self.end_date,
 				"payroll_frequency": "Monthly",
@@ -52,18 +61,49 @@ class PayrollGenerator:
 			}
 		)
 
+	def keep_batch_employees(self, entry) -> None:
+		"""HRMS lists everyone who is due a salary in the period. Each batch keeps its own part."""
+		exited = self.get_exited([row.employee for row in entry.employees])
+		keep = [row for row in entry.employees if (row.employee in exited) == (self.batch == "Exited")]
+		if not keep:
+			message = (
+				_("No employee with a salary structure left {0} in this pay cycle.")
+				if self.batch == "Exited"
+				else _("No employee of {0} with a salary structure is waiting for a salary slip in this pay cycle.")
+			)
+			frappe.throw(message.format(self.company), title=_("Nobody to Pay"))
+		entry.set("employees", keep)
+		entry.number_of_employees = len(keep)
+
+	def get_exited(self, employees: list[str]) -> set[str]:
+		if not employees:
+			return set()
+		return set(
+			frappe.get_all(
+				"Employee",
+				filters={
+					"name": ["in", employees],
+					"relieving_date": ["between", [self.start_date, self.end_date]],
+				},
+				pluck="name",
+			)
+		)
+
 	def check_no_entry_exists(self):
 		existing = frappe.db.exists(
 			"Payroll Entry",
 			{
 				"company": self.company,
+				"centhr_batch": self.batch,
 				"start_date": self.start_date,
 				"end_date": self.end_date,
 				"docstatus": ["!=", 2],
 			},
 		)
 		if existing:
-			frappe.throw(_("Payroll Entry {0} already exists for this period.").format(existing))
+			frappe.throw(
+				_("{0} payroll entry {1} already exists for this period.").format(_(self.batch), existing)
+			)
 
 
 class PayrollRun:
@@ -79,6 +119,7 @@ class PayrollRun:
 		return {
 			"name": entry.name,
 			"company": entry.company,
+			"batch": entry.get("centhr_batch") or "Regular",
 			"status": entry.status,
 			"docstatus": entry.docstatus,
 			"number_of_employees": entry.number_of_employees,

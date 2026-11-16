@@ -34,7 +34,9 @@ class PayrollAudit:
 		for row in rows:
 			row.attendance = attendance[row.name]
 			row.issues = self.find_issues(row, pending_leave, no_cost_center)
-			row.hold = holds.get(row.name)
+			hold = holds.get(row.name)
+			row.hold = hold.name if hold else None
+			row.hold_reason = hold.reason_for_withholding_salary if hold else None
 
 		cards = [{"key": "status", "label": _("Employee Status"), "count": sum(r.status == "Active" for r in rows), "info": True}]
 		for key, label in CHECKS:
@@ -96,7 +98,7 @@ class PayrollAudit:
 		)
 		return {r.name for r in rows if not r.payroll_cost_center and r.department not in with_center}
 
-	def get_holds(self, employees: list[str]) -> dict[str, str]:
+	def get_holds(self, employees: list[str]) -> dict:
 		"""Salary Withholdings covering the cycle; HRMS marks those employees' slips Withheld."""
 		if not employees:
 			return {}
@@ -109,13 +111,16 @@ class PayrollAudit:
 				"from_date": ["<=", self.scope.to_date],
 				"to_date": [">=", self.scope.from_date],
 			},
-			fields=["employee", "name"],
+			fields=["employee", "name", "reason_for_withholding_salary"],
 		)
-		return {r.employee: r.name for r in rows}
+		return {r.employee: r for r in rows}
 
 
 def set_hold(employee: str, scope: Scope, reason: str | None = None) -> str:
-	"""Withholds the employee's salary for this one cycle."""
+	"""Withholds the employee's salary for this one cycle. The reason is kept on the Salary Withholding."""
+	reason = (reason or "").strip()
+	if not reason:
+		frappe.throw(_("Say why this salary is put on hold."), title=_("Reason Missing"))
 	doc = frappe.get_doc(
 		{
 			"doctype": "Salary Withholding",
@@ -123,7 +128,7 @@ def set_hold(employee: str, scope: Scope, reason: str | None = None) -> str:
 			"from_date": scope.from_date,
 			"payroll_frequency": "Monthly",
 			"number_of_withholding_cycles": 1,
-			"reason_for_withholding_salary": reason or _("Held from the Payroll Dashboard"),
+			"reason_for_withholding_salary": reason,
 		}
 	).insert()
 	doc.submit()

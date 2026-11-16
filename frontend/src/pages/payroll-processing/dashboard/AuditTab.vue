@@ -62,7 +62,10 @@
 			</div>
 		</template>
 		<template #cell-payroll="{ row }">
-			<StatusBadge pill :tone="payrollTone(row)" :status="payrollStatus(row)" />
+			<div class="min-w-0">
+				<StatusBadge pill :tone="payrollTone(row)" :status="payrollStatus(row)" />
+				<div v-if="row.hold_reason" class="truncate text-[12px] text-ch-ink-3" :title="row.hold_reason">{{ row.hold_reason }}</div>
+			</div>
 		</template>
 		<template #cell-actions="{ row }">
 			<div class="flex justify-end" @click.stop>
@@ -72,12 +75,36 @@
 		</template>
 	</DataTable>
 	<Pager v-model:page="page" v-model:page-size="pageSize" :total="filtered.length" />
+
+	<Dialog v-model:open="holdOpen" title="Hold salary">
+		<div class="flex flex-col gap-3 text-[13px]">
+			<p class="text-ch-ink-2">
+				Hold {{ holding?.employee_name }}'s salary for {{ cycleLabel(scope.from, scope.to) }}? Their salary slip is marked Withheld and
+				left out of the payment until you release it.
+			</p>
+			<label for="hold-reason" class="text-ch-ink-2">Reason for the hold <span class="text-ch-red-dot">*</span></label>
+			<textarea
+				id="hold-reason"
+				v-model="holdReason"
+				rows="3"
+				placeholder="For example: disciplinary case open, bank details to confirm"
+				class="rounded-3 border-0 bg-ch-subtle px-2 py-1.5 text-[13px] text-ch-ink placeholder:text-ch-ink-4"
+			/>
+			<p class="text-ch-ink-3">The reason is kept on the hold and shown in this list.</p>
+		</div>
+		<template #actions>
+			<div class="flex justify-end gap-2">
+				<Button label="Cancel" @click="holdOpen = false" />
+				<Button variant="solid" theme="red" label="Set hold" :disabled="!holdReason.trim()" :loading="!!acting" @click="confirmHold" />
+			</div>
+		</template>
+	</Dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRouter } from "vue-router"
-import { Button, dialog, toast } from "frappe-ui"
+import { Button, Dialog, toast } from "frappe-ui"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
@@ -154,14 +181,21 @@ function payrollTone(row: AuditRow): Tone {
 	return row.assignment ? "green" : "gray"
 }
 
+// The employee whose hold is being set, and why
+const holdOpen = ref(false)
+const holding = ref<AuditRow | null>(null)
+const holdReason = ref("")
+
 function hold(row: AuditRow) {
-	dialog.confirm({
-		title: "Hold salary",
-		message: `Hold ${row.employee_name}'s salary for ${cycleLabel(props.scope.from, props.scope.to)}? Their salary slip is marked Withheld and left out of the bank entry until you release it.`,
-		confirmLabel: "Set hold",
-		theme: "red",
-		onConfirm: () => act(row, () => setHold(row.name, props.scope), "Salary on hold"),
-	})
+	holding.value = row
+	holdReason.value = ""
+	holdOpen.value = true
+}
+
+async function confirmHold() {
+	const row = holding.value!
+	await act(row, () => setHold(row.name, props.scope, holdReason.value.trim()), "Salary on hold")
+	holdOpen.value = false
 }
 
 function release(row: AuditRow) {

@@ -48,3 +48,45 @@ def run_slip_action(action: str, name: str):
 	else:
 		# Saving a draft slip makes HRMS work its days and amounts out again
 		doc.save()
+
+
+SLIP_FIELDS = [
+	"name",
+	"employee",
+	"employee_name",
+	"department",
+	"designation",
+	"company",
+	"status",
+	"docstatus",
+	"start_date",
+	"end_date",
+	"salary_structure",
+	"payroll_entry",
+	"journal_entry",
+	"currency",
+	"total_working_days",
+	"payment_days",
+	"absent_days",
+	"leave_without_pay",
+	"gross_pay",
+	"total_deduction",
+	"net_pay",
+	"bank_name",
+	"bank_account_no",
+]
+
+
+def get_slip_details(name: str) -> dict:
+	"""One salary slip for the quick view: its days, earnings, deductions and net pay."""
+	doc = frappe.get_doc("Salary Slip", name)
+	doc.check_permission("read")
+	return {
+		**{field: doc.get(field) for field in SLIP_FIELDS},
+		"earnings": component_lines(doc.earnings),
+		"deductions": component_lines(doc.deductions),
+	}
+
+
+def component_lines(rows: list) -> list[dict]:
+	return [{"salary_component": row.salary_component, "amount": row.amount} for row in rows]

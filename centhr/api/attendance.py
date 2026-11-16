@@ -2,6 +2,8 @@ import frappe
 from frappe.utils import add_days, add_months, cstr, date_diff, getdate
 from hrms.hr.utils import get_holidays_for_employee
 
+from centhr.payroll_dashboard.settings import get_cycle, get_start_day, get_years
+
 MAX_EMPLOYEES = 50
 MAX_DAYS = 62
 
@@ -32,6 +34,11 @@ def get_payroll_cycle(company: str, date: str) -> dict | None:
 	Uses the part of the company's Payroll Period (see get_cycles) that contains the date.
 	Returns None when no Payroll Period or part contains it."""
 	date = getdate(date)
+	start_day = get_start_day(company)
+	if start_day:
+		# The company's own cycle day, set on the Payroll Dashboard, comes before any Payroll Period
+		from_date, to_date = get_cycle(start_day, date)
+		return {"payroll_period": None, "from_date": from_date, "to_date": to_date}
 	periods = frappe.get_list(
 		"Payroll Period",
 		filters={"company": company, "start_date": ("<=", date), "end_date": (">=", date)},
@@ -53,6 +60,9 @@ def get_payroll_cycle(company: str, date: str) -> dict | None:
 def get_payroll_years(company: str) -> list[dict]:
 	"""The company's Payroll Periods (one per payroll year), newest first, each with its parts
 	(see get_cycles), so attendance views can pick a year and then a month of it."""
+	start_day = get_start_day(company)
+	if start_day:
+		return get_years(start_day)
 	years = frappe.get_list(
 		"Payroll Period",
 		filters={"company": company},

@@ -87,7 +87,7 @@ export const COLUMNS = {
 	net_pay: money("net_pay", "Net pay"),
 	effective_from: { key: "effective_from", label: "Effective since", width: "110px", sortable: true, format: (v) => formatDateShort(v) },
 	slip_status: { key: "slip_status", label: "Payroll status", width: "110px", sortable: true },
-	actions: { key: "actions", label: "", width: "160px", align: "right" },
+	actions: { key: "actions", label: "", width: "200px", align: "right" },
 } satisfies Record<string, Column>
 
 export function countBy(filters: RowFilter[], rows: SalaryRow[], period: Period): Record<string, number> {

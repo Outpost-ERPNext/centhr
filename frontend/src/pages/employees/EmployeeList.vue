@@ -57,6 +57,11 @@
 		<template #cell-status="{ row }">
 			<StatusBadge doctype="Employee" :status="row.status" />
 		</template>
+		<template #cell-quick_view="{ row }">
+			<div class="flex justify-end" @click.stop>
+				<Button size="sm" icon="lucide-eye" aria-label="Quick view" tooltip="Quick view" @click="quickView = row.name" />
+			</div>
+		</template>
 	</DataTable>
 
 	<Pager
@@ -64,10 +69,12 @@
 		v-model:page-size="list.state.pageSize"
 		:total="list.total.value"
 	/>
+
+	<EmployeeQuickView :employee="quickView" @close="quickView = null" />
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 import { Avatar, Button } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
@@ -75,6 +82,7 @@ import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
 import FilterSelect from "@/components/FilterSelect.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
+import EmployeeQuickView from "@/components/EmployeeQuickView.vue"
 import Pager from "@/components/Pager.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { useDocList, type Filter } from "@/data/list"
@@ -109,6 +117,9 @@ const list = useDocList({
 
 const hasFilters = computed(() => !!list.state.search || Object.values(list.state.filters).some(Boolean))
 
+// The employee whose quick view is open; a row click still opens the full profile
+const quickView = ref<string | null>(null)
+
 const columns: Column[] = [
 	{ key: "employee_name", label: "Name", width: "minmax(200px,2.2fr)", sortable: true },
 	{ key: "name", label: "ID", width: "minmax(110px,1.1fr)", sortable: true, class: "text-ch-ink-2" },
@@ -123,5 +134,6 @@ const columns: Column[] = [
 		sortable: true,
 		format: (v) => formatDate(v),
 	},
+	{ key: "quick_view", label: "", width: "52px", align: "right" },
 ]
 </script>

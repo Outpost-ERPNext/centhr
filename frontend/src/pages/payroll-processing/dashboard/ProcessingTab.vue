@@ -10,18 +10,22 @@
 		<CollapsibleSection title="Payroll entries" storage-key="dashboard-runs" :summary="runsSummary">
 			<div class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2 text-[13px] text-ch-ink-3">
-					<span>{{ eligible }} active employees with a salary structure have no slip yet.</span>
-					<Button
-						v-if="canGenerate"
-						class="ml-auto"
-						variant="solid"
-						icon-left="lucide-play"
-						label="Generate payroll"
-						:tooltip="scope.company ? undefined : 'Choose a company to generate its payroll'"
-						:disabled="!scope.company || !eligible || companyHasRun"
-						:loading="generating"
-						@click="confirmGenerate"
-					/>
+					<span>
+						{{ eligible }} active employees with a salary structure have no slip yet<template v-if="exited">, and {{ exited }} who left in this cycle</template>.
+					</span>
+					<div v-if="canGenerate" class="ml-auto">
+						<Dropdown :options="generateOptions" align="end">
+						<Button
+							variant="solid"
+							icon-left="lucide-play"
+							icon-right="lucide-chevron-down"
+							label="Generate"
+							:tooltip="scope.company ? undefined : 'Choose a company to generate its payroll'"
+							:disabled="!scope.company"
+							:loading="generating"
+						/>
+						</Dropdown>
+					</div>
 				</div>
 				<PayrollRunCard v-for="run in data?.runs || []" :key="run.name" :run="run" @changed="refresh" />
 			</div>
@@ -35,6 +39,7 @@
 
 	<FilterBar v-model:search="search" :total="filtered.length" :active="hasFilters" search-placeholder="Search name or ID" noun="salary slip" @clear="clear">
 		<FilterLink v-model="department" doctype="Department" placeholder="Department" :filters="scope.company ? { company: scope.company } : undefined" />
+		<Button icon-left="lucide-scale" label="Reconcile with Excel" :disabled="!data?.slips.length" @click="reconcileOpen = true" />
 		<Button icon-left="lucide-file-spreadsheet" label="Export (Excel)" :disabled="!filtered.length" :loading="exporting" @click="exportRows" />
 	</FilterBar>
 
@@ -58,7 +63,7 @@
 		:empty-message="hasFilters ? 'No salary slips match these filters' : 'No salary slips in this cycle yet'"
 		mobile-aside="net_pay"
 		min-width="1080px"
-		@row-click="(row) => router.push(routeFor('Salary Slip', row.name)!)"
+		@row-click="(row) => (quickView = row.name)"
 		@clear-filters="clear"
 	>
 		<template #cell-employee="{ row }">
@@ -79,6 +84,9 @@
 		<template #cell-net_pay="{ row }">
 			<span class="font-medium" :class="row.net_pay > 0 ? 'text-ch-green-ink' : 'text-ch-red-ink'">{{ formatCurrency(row.net_pay, row.currency) }}</span>
 		</template>
+		<template #cell-excel="{ row }">
+			<StatusBadge v-if="excel[row.employee]" pill :tone="EXCEL_TONES[excel[row.employee]]" :status="excel[row.employee]" />
+		</template>
 		<template #cell-actions="{ row }">
 			<div v-if="row.docstatus === 0" class="flex justify-end gap-1" @click.stop>
 				<Button size="sm" icon="lucide-refresh-cw" aria-label="Recalculate" tooltip="Recalculate" @click="runOne('recalculate', row.name)" />
@@ -87,12 +95,14 @@
 		</template>
 	</DataTable>
 	<Pager v-model:page="page" v-model:page-size="pageSize" :total="filtered.length" />
+
+	<SalarySlipQuickView :name="quickView" @close="quickView = null" @action="quickAction" />
+	<ExcelReconcileDialog v-model:open="reconcileOpen" :scope="scope" @result="reconciled = $event" />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue"
-import { useRouter } from "vue-router"
-import { Button, dialog, toast } from "frappe-ui"
+import { Button, Dropdown, dialog, toast } from "frappe-ui"
 import CollapsibleSection from "@/components/CollapsibleSection.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import FilterBar from "@/components/FilterBar.vue"
@@ -101,18 +111,19 @@ import Pager from "@/components/Pager.vue"
 import SegmentedTabs from "@/components/SegmentedTabs.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import ExcelReconcileDialog from "../ExcelReconcileDialog.vue"
 import PayrollRunCard from "../PayrollRunCard.vue"
+import SalarySlipQuickView from "../SalarySlipQuickView.vue"
 import { cycleLabel } from "@/data/payroll"
-import { change, exportSlips, getProcessing, updateSlips, useTabData, type Scope, type Totals } from "@/data/payrollDashboard"
-import { generatePayroll } from "@/data/payrollRun"
+import { change, exportSlips, getProcessing, updateSlips, useTabData, type ReconcileResult, type Scope, type Totals } from "@/data/payrollDashboard"
+import { generatePayroll, type PayrollBatch } from "@/data/payrollRun"
 import { can } from "@/data/permissions"
 import type { SalaryRow } from "@/data/salaryOverview"
 import { formatCurrency, formatNumber } from "@/utils/format"
-import { routeFor } from "@/utils/routes"
+import type { Tone } from "@/utils/status"
 
 const props = defineProps<{ scope: Scope; employees: SalaryRow[] }>()
 const emit = defineEmits<{ changed: [] }>()
-const router = useRouter()
 const { data, loading, error, reload } = useTabData(props.scope, getProcessing)
 
 const STATUSES = ["All", "Draft", "Submitted", "Withheld"]
@@ -134,9 +145,41 @@ const previous = computed(() => data.value?.previous || EMPTY)
 const currency = computed(() => data.value?.slips[0]?.currency)
 const money = (v: number) => formatCurrency(v, currency.value)
 const canGenerate = computed(() => can("Payroll Entry").create && can("Payroll Entry").submit)
-const companyHasRun = computed(() => (data.value?.runs || []).some((r) => r.company === props.scope.company))
+const leftInCycle = (r: SalaryRow) => !!r.relieving_date && r.relieving_date >= props.scope.from && r.relieving_date <= props.scope.to
+const eligible = computed(() => props.employees.filter((r) => r.status === "Active" && r.assignment && !r.salary_slip && !leftInCycle(r)).length)
+/** Each batch is generated once per company and cycle. */
+const hasRun = (batch: PayrollBatch) => (data.value?.runs || []).some((r) => r.company === props.scope.company && r.batch === batch)
+// Employees who left in the cycle are paid in their own batch
+const exited = computed(() => props.employees.filter((r) => leftInCycle(r) && r.assignment && !r.salary_slip).length)
+const generateOptions = computed(() => [
+	{
+		label: "Regular payroll",
+		description: hasRun("Regular") ? "Generated for this cycle" : `${eligible.value} employees waiting`,
+		icon: "lucide-users",
+		disabled: !eligible.value || hasRun("Regular"),
+		onClick: () => confirmGenerate("Regular"),
+	},
+	{
+		label: "Exited employees",
+		description: hasRun("Exited") ? "Generated for this cycle" : `${exited.value} left in this cycle`,
+		icon: "lucide-user-minus",
+		disabled: !exited.value || hasRun("Exited"),
+		onClick: () => confirmGenerate("Exited"),
+	},
+])
+
+// Opened from a row; the full slip is one click further
+const quickView = ref<string | null>(null)
+const reconcileOpen = ref(false)
+const reconciled = ref<ReconcileResult | null>(null)
+const EXCEL_TONES: Record<string, Tone> = { Matched: "green", Discrepancy: "red", "Missing in Excel": "amber" }
+/** Result of the last Excel reconciliation per employee, shown as a badge on their slip. */
+const excel = computed(() => Object.fromEntries((reconciled.value?.rows || []).map((r) => [r.employee, r.status])))
+watch(
+	() => [props.scope.company, props.scope.from, props.scope.to],
+	() => (reconciled.value = null)
+)
 // Who a payroll run pays: active employees with a salary structure and no slip in the cycle yet
-const eligible = computed(() => props.employees.filter((r) => r.status === "Active" && r.assignment && !r.salary_slip).length)
 const runsSummary = computed(() => {
 	const runs = data.value?.runs || []
 	return runs.length ? `${runs.length} in this cycle` : "None yet"
@@ -177,22 +220,30 @@ function clear() {
 	status.value = "All"
 }
 
-function confirmGenerate() {
+function confirmGenerate(batch: PayrollBatch) {
+	const count = batch === "Exited" ? exited.value : eligible.value
+	const who = batch === "Exited" ? "employees who left in this cycle" : "employees"
 	dialog.confirm({
-		title: "Generate payroll",
-		message: `Create the payroll for ${props.scope.company}, ${cycleLabel(props.scope.from, props.scope.to)}? A payroll entry is submitted and draft salary slips are created for ${eligible.value} employees. Review the Pre-Check Audit first.`,
+		title: batch === "Exited" ? "Generate payroll for exited employees" : "Generate regular payroll",
+		message: `Create the payroll for ${props.scope.company}, ${cycleLabel(props.scope.from, props.scope.to)}? A payroll entry is submitted and draft salary slips are created for ${count} ${who}. Review the Pre-Check Audit first.`,
 		confirmLabel: "Generate",
 		onConfirm: async () => {
 			generating.value = true
 			try {
-				const run = await generatePayroll(props.scope.company, props.scope.from, props.scope.to)
-				toast.success(`Payroll entry ${run.name} created`)
+				const run = await generatePayroll(props.scope.company, props.scope.from, props.scope.to, batch)
+				const recovered = run.advances_recovered ? `; ${run.advances_recovered} overdue advances scheduled for deduction` : ""
+				toast.success(`Payroll entry ${run.name} created${recovered}`)
 				await refresh()
 			} finally {
 				generating.value = false
 			}
 		},
 	})
+}
+
+function quickAction(action: "recalculate" | "delete", name: string) {
+	quickView.value = null
+	runOne(action, name)
 }
 
 function runOne(action: "recalculate" | "delete", name: string) {
@@ -237,9 +288,10 @@ async function exportRows() {
 
 const days = (label: string, key: string): Column => ({ key, label, width: "72px", align: "right", format: (v) => formatNumber(v) })
 const amount = (label: string, key: string): Column => ({ key, label, width: "minmax(110px,1fr)", align: "right", format: (v, r) => formatCurrency(v, r.currency) })
-const columns: Column[] = [
+const columns = computed<Column[]>(() => [
 	{ key: "employee", label: "Employee", width: "minmax(200px,1.8fr)" },
 	{ key: "status", label: "Status", width: "100px" },
+	...(reconciled.value ? [{ key: "excel", label: "Excel", width: "140px" } as Column] : []),
 	days("Work days", "total_working_days"),
 	days("Absent", "absent_days"),
 	days("LWP", "leave_without_pay"),
@@ -248,5 +300,5 @@ const columns: Column[] = [
 	amount("Deductions", "total_deduction"),
 	{ key: "net_pay", label: "Net pay", width: "minmax(120px,1fr)", align: "right" },
 	{ key: "actions", label: "", width: "84px", align: "right" },
-]
+])
 </script>

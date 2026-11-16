@@ -9,7 +9,13 @@ from centhr.payroll_dashboard.scope import Scope
 
 
 def get_advances(scope: Scope) -> dict:
-	return {"advances": get_pending_advances(scope), "deductions": get_cycle_deductions(scope)}
+	return {
+		"advances": get_pending_advances(scope),
+		"deductions": get_cycle_deductions(scope),
+		"auto_recovery": bool(
+			scope.company and frappe.db.get_value("Company", scope.company, "auto_recover_advances")
+		),
+	}
 
 
 def get_pending_advances(scope: Scope) -> list:
@@ -32,6 +38,7 @@ def get_pending_advances(scope: Scope) -> list:
 			"return_amount",
 			"pending_amount",
 			"repay_unclaimed_amount_from_salary",
+			"due_date",
 			"currency",
 			"status",
 		],
@@ -49,7 +56,7 @@ def get_pending_advances(scope: Scope) -> list:
 	rows = [row for row in rows if outstanding(row) > 0]
 	for row in rows:
 		row.pending_amount = outstanding(row)
-		row.overdue = row.posting_date and frappe.utils.getdate(row.posting_date) <= scope.to_date
+		row.overdue = is_due(row, scope.to_date)
 		row.recovery_scheduled = row.name in recovering
 	return rows
 
@@ -89,3 +96,48 @@ def create_salary_recovery(doc, salary_component: str, payroll_date, amount: flo
 	additional.insert()
 	additional.submit()
 	return additional.name
+
+
+def is_due(advance, cycle_end) -> bool:
+	"""Due for recovery in a cycle: its due date, or its posting date when it has none, is on or
+	before the cycle's end."""
+	due = advance.get("due_date") or advance.get("posting_date")
+	return bool(due) and frappe.utils.getdate(due) <= frappe.utils.getdate(cycle_end)
+
+
+def recover_overdue_advances(company: str, cycle_end, force: bool = False) -> list[str]:
+	"""Schedules every overdue advance of the company for deduction in the cycle that ends on
+	`cycle_end`. Runs when payroll is generated for a company that recovers advances in payroll, or
+	with `force` from the Advances tab. Advances with a claim still in approval, and those already
+	scheduled, are skipped. Returns the Additional Salary records created."""
+	from centhr.iou import settings as iou_settings
+	from centhr.iou.claim import claims_in_approval
+
+	if not force and not frappe.db.get_value("Company", company, "auto_recover_advances"):
+		return []
+
+	advances = frappe.get_all(
+		"Employee Advance",
+		filters={"company": company, "docstatus": 1, "paid_amount": [">", 0]},
+		fields=["name", "posting_date", "due_date", "paid_amount", "claimed_amount", "return_amount"],
+	)
+	due = [row for row in advances if outstanding(row) > 0 and is_due(row, cycle_end)]
+	if not due:
+		return []
+
+	names = [row.name for row in due]
+	skipped = set(claims_in_approval(names)) | set(
+		frappe.get_all(
+			"Additional Salary",
+			filters={"ref_doctype": "Employee Advance", "ref_docname": ["in", names], "docstatus": ["<", 2]},
+			pluck="ref_docname",
+		)
+	)
+	component = iou_settings.salary_component()
+	return [
+		create_salary_recovery(
+			frappe.get_doc("Employee Advance", row.name), component, cycle_end, outstanding(row), ignore_permissions=True
+		)
+		for row in due
+		if row.name not in skipped
+	]

@@ -1,6 +1,13 @@
 <template>
 	<PageHeader :crumbs="[{ label: 'Payroll Dashboard' }]">
 		<template #actions>
+			<Button
+				icon-left="lucide-settings"
+				label="Payroll settings"
+				:tooltip="state.company ? undefined : 'Choose a company to see its pay cycle settings'"
+				:disabled="!state.company"
+				@click="settingsOpen = true"
+			/>
 			<Button icon-left="lucide-rotate-ccw" label="Refresh" @click="refresh" />
 		</template>
 	</PageHeader>
@@ -11,7 +18,7 @@
 			<div class="w-56">
 				<FilterLink v-model="state.company" doctype="Company" placeholder="All companies" />
 			</div>
-			<PayrollCycleNav :company="state.company" :from="state.from" :to="state.to" @update:from="state.from = $event" @update:to="state.to = $event" />
+			<PayrollCycleNav :key="cycleKey" :company="state.company" :from="state.from" :to="state.to" @update:from="state.from = $event" @update:to="state.to = $event" />
 			<span v-if="state.from" class="rounded-full bg-ch-subtle px-3 py-1 text-[12px] text-ch-ink-3">
 				Cycle <b class="tabular-nums text-ch-ink">{{ formatDateShort(state.from) }} → {{ formatDateShort(state.to) }}</b>
 			</span>
@@ -37,6 +44,8 @@
 			<component :is="TAB_COMPONENTS[tab]" :key="`${tab}-${refreshKey}`" v-bind="tabProps" />
 		</KeepAlive>
 	</div>
+
+	<PayrollSettingsDialog v-if="state.company" v-model:open="settingsOpen" :company="state.company" @saved="onSettingsSaved" />
 </template>
 
 <script setup lang="ts">
@@ -54,6 +63,7 @@ import AnalyticsTab from "./dashboard/AnalyticsTab.vue"
 import AdvancesTab from "./dashboard/AdvancesTab.vue"
 import ReportsTab from "./dashboard/ReportsTab.vue"
 import ComplianceTab from "./dashboard/ComplianceTab.vue"
+import PayrollSettingsDialog from "./PayrollSettingsDialog.vue"
 import { TABS, type TabKey } from "@/data/payrollDashboard"
 import { useSalaryOverview } from "@/data/useSalaryOverview"
 import { formatDateShort } from "@/utils/format"
@@ -83,6 +93,14 @@ const refreshKey = ref(0)
 function refresh() {
 	refreshKey.value++
 	overview.load()
+}
+
+const settingsOpen = ref(false)
+const cycleKey = ref(0)
+/** A new cycle start day changes every cycle, so the picker starts again at the company's current one. */
+function onSettingsSaved() {
+	state.from = state.to = ""
+	cycleKey.value++
 }
 
 const tabProps = computed(() => ({

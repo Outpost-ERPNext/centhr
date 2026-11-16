@@ -19,6 +19,6 @@ const columns = [
 	COLUMNS.salary_structure,
 	COLUMNS.base,
 	COLUMNS.slip_status,
-	{ ...COLUMNS.actions, width: "100px" },
+	{ ...COLUMNS.actions, width: "140px" },
 ]
 </script>

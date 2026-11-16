@@ -78,10 +78,17 @@ export function getPayrollYears(company: string | null | undefined): Promise<Pay
 	if (!yearCache.has(company)) {
 		const request = api<Omit<PayrollYear, "label">[]>("centhr.api.attendance.get_payroll_years", { company }, { silent: true })
 			.then((years) =>
-				years.length ? years.map((y) => ({ ...y, label: y.from_date.slice(0, 4) })) : calendarYears()
+				// A company with its own cycle start day names its years itself: the year its cycles end in
+				years.length ? years.map((y) => ({ ...y, label: (y as PayrollYear).label || y.from_date.slice(0, 4) })) : calendarYears()
 			)
 			.catch(() => calendarYears())
 		yearCache.set(company, request)
 	}
 	return yearCache.get(company)!
+}
+
+/** Forget a company's pay cycles after its cycle start day changed. */
+export function clearPayrollCycles(company: string) {
+	yearCache.delete(company)
+	for (const key of [...cache.keys()]) if (key.startsWith(`${company}|`)) cache.delete(key)
 }

@@ -3,7 +3,16 @@
 import frappe
 
 from centhr.api.salary_overview import SalaryOverview
-from centhr.payroll_dashboard import advances, analytics, audit, compliance, processing, reports
+from centhr.payroll_dashboard import (
+	advances,
+	analytics,
+	audit,
+	compliance,
+	processing,
+	reconcile,
+	reports,
+	settings,
+)
 from centhr.payroll_dashboard.attendance import AttendanceSummary
 from centhr.payroll_dashboard.scope import Scope
 
@@ -74,3 +83,51 @@ def get_compliance(from_date: str, to_date: str, company: str | None = None) -> 
 @frappe.whitelist(methods=["POST"])
 def request_obligation_payment(obligation: str, amount: float, payment_account: str | None = None) -> str:
 	return compliance.request_payment(obligation, amount, payment_account)
+
+
+# Settings of the chosen company
+
+
+@frappe.whitelist()
+def get_payroll_settings(company: str) -> dict:
+	return settings.get_settings(company)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_payroll_settings(company: str, start_day: int, auto_recover_advances: bool | int = False) -> dict:
+	"""The company's pay cycle start day and whether payroll recovers overdue advances."""
+	return settings.save_settings(company, start_day, bool(int(auto_recover_advances)))
+
+
+@frappe.whitelist(methods=["POST"])
+def recover_overdue_advances(company: str, to_date: str) -> int:
+	"""Schedule every overdue advance of the company for deduction in the cycle ending on `to_date`."""
+	frappe.has_permission("Additional Salary", "create", throw=True)
+	frappe.has_permission("Company", "read", doc=company, throw=True)
+	return len(advances.recover_overdue_advances(company, to_date, force=True))
+
+
+# Salary slip quick view and Excel reconciliation
+
+
+@frappe.whitelist()
+def get_salary_slip_details(name: str) -> dict:
+	return processing.get_slip_details(name)
+
+
+@frappe.whitelist()
+def download_master_sheet_template(from_date: str, to_date: str, company: str | None = None):
+	"""The Excel sheet Finance fills in for the reconciliation, with the cycle's employees listed."""
+	frappe.has_permission("Salary Slip", "read", throw=True)
+	reconcile.download_template(Scope.make(from_date, to_date, company))
+
+
+@frappe.whitelist(methods=["POST"])
+def reconcile_master_sheet(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""Compare the uploaded master payroll sheet (the request's `file`) with the cycle's salary slips.
+	Nothing is saved: the result goes back to the page."""
+	frappe.has_permission("Salary Slip", "read", throw=True)
+	upload = frappe.request.files.get("file")
+	if not upload:
+		frappe.throw(frappe._("Choose the master payroll sheet to upload."))
+	return reconcile.reconcile(Scope.make(from_date, to_date, company), upload.filename, upload.stream.read())

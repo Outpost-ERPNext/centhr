@@ -4,6 +4,8 @@
 			<span class="lucide-banknote size-4 text-ch-ink-3" />
 			<RouterLink :to="routeFor('Payroll Entry', run.name)!" class="font-medium text-ch-ink hover:underline">{{ run.name }}</RouterLink>
 			<StatusBadge pill doctype="Payroll Entry" :status="run.status" />
+			<StatusBadge v-if="run.batch === 'Exited'" pill tone="red" status="Exited employees" />
+			<StatusBadge v-if="payment" pill :tone="payment.tone" :status="payment.label" />
 			<span class="text-ch-ink-3">{{ formatNumber(run.number_of_employees) }} employees</span>
 
 			<div class="ml-auto flex items-center gap-1.5">
@@ -42,7 +44,7 @@
 			{{ stripHtml(run.error_message) }}
 		</p>
 		<p v-if="run.payouts.length" class="flex flex-wrap items-center gap-2 text-ch-ink-3">
-			Bank entries:
+			Payment (bank entries):
 			<a v-for="je in run.payouts" :key="je.name" :href="`/desk/journal-entry/${encodeURIComponent(je.name)}`" target="_blank" class="text-ch-ink hover:underline">
 				{{ je.name }} ({{ je.docstatus ? "Submitted" : "Draft" }})
 			</a>
@@ -70,7 +72,7 @@ import LinkField from "@/components/fields/LinkField.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { stripHtml } from "@/data/api"
 import { can } from "@/data/permissions"
-import { STEPS, runPayrollStep, stages, type PayrollRun, type StepKey } from "@/data/payrollRun"
+import { STEPS, paymentStatus, runPayrollStep, stages, type PayrollRun, type StepKey } from "@/data/payrollRun"
 import { formatNumber } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
 
@@ -78,6 +80,7 @@ const props = defineProps<{ run: PayrollRun }>()
 const emit = defineEmits<{ changed: [run: PayrollRun] }>()
 
 const busy = ref(false)
+const payment = computed(() => paymentStatus(props.run))
 const pending = ref<StepKey | null>(null)
 const accountOpen = ref(false)
 const account = ref<string | null>(null)

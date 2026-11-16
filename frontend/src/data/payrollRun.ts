@@ -4,6 +4,8 @@ import { api } from "@/data/api"
 export interface PayrollRun {
 	name: string
 	company: string
+	/** Regular, or Exited for employees who left in the cycle. */
+	batch: PayrollBatch
 	status: string
 	docstatus: number
 	number_of_employees: number
@@ -15,6 +17,8 @@ export interface PayrollRun {
 	has_withheld_salaries: boolean
 	next_step: StepKey | null
 }
+
+export type PayrollBatch = "Regular" | "Exited"
 
 export type StepKey = "submit" | "create_slips" | "submit_slips" | "bank_entry" | "release_withheld" | "cancel"
 
@@ -44,9 +48,9 @@ export const STEPS: Record<StepKey, Step> = {
 		confirm: "Submit all draft salary slips? This books the payroll accrual and the slips can no longer be edited.",
 	},
 	bank_entry: {
-		label: "Make bank entry",
+		label: "Request payment",
 		icon: "lucide-landmark",
-		confirm: "Create the bank entry that pays these salaries? It is created as a draft journal entry to review in Accounts.",
+		confirm: "Request payment of these salaries? A draft bank entry is created for Finance to review and submit in Accounts.",
 		needsAccount: true,
 	},
 	release_withheld: {
@@ -68,8 +72,16 @@ export function stages(run: PayrollRun) {
 	return [
 		{ label: "Salary slips created", done: !!run.salary_slips_created },
 		{ label: "Salary slips submitted", done: !!run.salary_slips_submitted },
-		{ label: "Bank entry made", done: run.payouts.length > 0 },
+		{ label: "Payment requested", done: run.payouts.length > 0 },
 	]
+}
+
+/** Where the payment of a run stands, once it was requested: the bank entry is a draft until Finance submits it. */
+export function paymentStatus(run: PayrollRun): { label: string; tone: "amber" | "green" } | null {
+	if (!run.payouts.length) return null
+	return run.payouts.every((entry) => entry.docstatus === 1)
+		? { label: "Paid", tone: "green" }
+		: { label: "Payment requested", tone: "amber" }
 }
 
 /** Without a company, every company's runs in the period. */
@@ -77,8 +89,13 @@ export function getPayrollRuns(company: string, from: string, to: string) {
 	return api<PayrollRun[]>("centhr.api.payroll.get_payroll_runs", { company, start_date: from, end_date: to })
 }
 
-export function generatePayroll(company: string, from: string, to: string) {
-	return api<PayrollRun>("centhr.api.payroll.generate_payroll", { company, start_date: from, end_date: to })
+export function generatePayroll(company: string, from: string, to: string, batch: PayrollBatch) {
+	return api<PayrollRun & { advances_recovered: number }>("centhr.api.payroll.generate_payroll", {
+		company,
+		start_date: from,
+		end_date: to,
+		batch,
+	})
 }
 
 export function runPayrollStep(name: string, step: StepKey, paymentAccount?: string | null) {

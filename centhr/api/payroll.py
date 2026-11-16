@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 
 from centhr.api.payroll_run import PayrollGenerator, PayrollRun
+from centhr.payroll_dashboard.advances import recover_overdue_advances
 
 
 @frappe.whitelist()
@@ -22,11 +23,15 @@ def get_payroll_runs(start_date: str, end_date: str, company: str | None = None)
 
 
 @frappe.whitelist(methods=["POST"])
-def generate_payroll(company: str, start_date: str, end_date: str) -> dict:
-	"""Creates and submits a monthly Payroll Entry for the period. On submit, HRMS creates the draft
-	salary slips (in a background job for more than 30 employees)."""
-	name = PayrollGenerator(company, start_date, end_date).run()
-	return PayrollRun(name).summary()
+def generate_payroll(company: str, start_date: str, end_date: str, batch: str = "Regular") -> dict:
+	"""Creates and submits a monthly Payroll Entry for the period: the Regular batch, or the Exited
+	batch for employees who left in it. On submit, HRMS creates the draft salary slips (in a background
+	job for more than 30 employees). A company that recovers advances in payroll gets the overdue ones
+	scheduled first, so the new slips deduct them."""
+	frappe.has_permission("Payroll Entry", "create", throw=True)
+	recovered = recover_overdue_advances(company, end_date) if batch == "Regular" else []
+	name = PayrollGenerator(company, start_date, end_date, batch).run()
+	return {**PayrollRun(name).summary(), "advances_recovered": len(recovered)}
 
 
 @frappe.whitelist(methods=["POST"])

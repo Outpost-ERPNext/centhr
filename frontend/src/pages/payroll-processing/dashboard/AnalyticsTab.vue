@@ -4,7 +4,13 @@
 
 		<template v-if="view === 'journal' && data?.summary">
 			<div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
-				<StatCard label="Reconciled employees" :value="`${data.summary.reconciled}`" :sub="journalNote" />
+				<StatCard label="Confirmed employees" :value="`${data.summary.reconciled}`" tone="green" :sub="journalNote" />
+				<StatCard
+					label="Discrepancy / Missing JV"
+					:value="`${data.summary.discrepancies} / ${data.summary.missing}`"
+					:tone="data.summary.discrepancies || data.summary.missing ? 'red' : 'green'"
+					sub="Submitted slips that do not agree with the books"
+				/>
 				<StatCard label="Salary earnings" :value="money(data.summary.salary_earnings)" />
 				<StatCard label="Journal expense (GL)" :value="money(data.summary.journal_expense)" tone="blue" />
 				<StatCard label="Earnings variance" :value="money(data.summary.earnings_variance)" :tone="data.summary.earnings_variance ? 'red' : 'green'" />
@@ -82,8 +88,8 @@ const VIEWS = [
 	{ label: "Multi-month comparison", value: "months" },
 	{ label: "Payroll journal summary", value: "journal" },
 ]
-const JOURNAL_FILTERS = ["All", "Confirmed", "Discrepancy", "Booked in total", "Not booked"]
-const JOURNAL_TONES: Record<string, Tone> = { Confirmed: "green", Discrepancy: "red", "Booked in total": "blue", "Not booked": "amber" }
+const JOURNAL_FILTERS = ["All", "Confirmed", "Discrepancy", "Missing JV"]
+const JOURNAL_TONES: Record<string, Tone> = { Confirmed: "green", Discrepancy: "red", "Missing JV": "amber" }
 
 const view = ref("department")
 const journalFilter = ref("All")

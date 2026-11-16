@@ -73,8 +73,11 @@ def by_month(scope: Scope) -> dict:
 
 
 def journal_summary(scope: Scope) -> dict:
-	"""Submitted salary slips against the accrual journal entries that booked them. Net pay is matched
-	per employee when HRMS books payroll per employee (Payroll Settings); earnings and deductions in total."""
+	"""Submitted salary slips against the accrual journal entries that booked them.
+
+	When HRMS books payroll per employee (Payroll Settings), each slip's net pay is matched to that
+	employee's payable line. When it books a run in one line, the run's slips are matched together: they
+	are all Confirmed when their net pay adds up to what the journal credited to payroll payable."""
 	slips = [s for s in scope.get_slips() if s.docstatus == 1]
 	journals = {s.journal_entry for s in slips if s.journal_entry}
 	# The books are read below without per-row checks, so only for users who may read journal entries
@@ -87,23 +90,29 @@ def journal_summary(scope: Scope) -> dict:
 		)
 	)
 
-	booked_net = defaultdict(float)
+	booked = JournalNet()
 	expense = provisions = 0.0
 	for line in lines:
 		if line.root_type == "Expense":
 			expense += flt(line.debit) - flt(line.credit)
 		elif line.account in payable_accounts:
-			if line.party_type == "Employee" and line.party:
-				booked_net[line.party] += flt(line.credit) - flt(line.debit)
+			booked.add(line)
 		elif line.root_type == "Liability":
 			provisions += flt(line.credit) - flt(line.debit)
 
-	rows = [{**slip, **match_slip(slip, booked_net)} for slip in slips]
+	slip_net = defaultdict(float)
+	for slip in slips:
+		slip_net[slip.journal_entry] += flt(slip.net_pay)
+	rows = [{**slip, **booked.match(slip, slip_net)} for slip in slips]
+
 	earnings = sum(flt(s.gross_pay) for s in slips)
 	deductions = sum(flt(s.total_deduction) for s in slips)
+	statuses = [row["journal_status"] for row in rows]
 	return {
 		"summary": {
-			"reconciled": sum(r["journal_status"] == "Confirmed" for r in rows),
+			"reconciled": statuses.count("Confirmed"),
+			"discrepancies": statuses.count("Discrepancy"),
+			"missing": statuses.count("Missing JV"),
 			"salary_earnings": earnings,
 			"journal_expense": expense,
 			"earnings_variance": flt(expense - earnings, 2),
@@ -116,14 +125,36 @@ def journal_summary(scope: Scope) -> dict:
 	}
 
 
-def match_slip(slip, booked_net: dict) -> dict:
-	if not slip.journal_entry:
-		return {"journal_net": None, "variance": None, "journal_status": "Not booked"}
-	if slip.employee not in booked_net:
-		# HRMS booked the run in one line, so only the totals can be matched
-		return {"journal_net": None, "variance": None, "journal_status": "Booked in total"}
-	variance = flt(booked_net[slip.employee] - flt(slip.net_pay), 2)
-	return {"journal_net": booked_net[slip.employee], "variance": variance, "journal_status": "Confirmed" if not variance else "Discrepancy"}
+class JournalNet:
+	"""Net pay the accrual journals credited to payroll payable: per employee where the journal names
+	the employee, and per journal entry in total."""
+
+	def __init__(self):
+		self.by_employee = defaultdict(float)
+		self.by_journal = defaultdict(float)
+
+	def add(self, line) -> None:
+		amount = flt(line.credit) - flt(line.debit)
+		self.by_journal[line.parent] += amount
+		if line.party_type == "Employee" and line.party:
+			self.by_employee[(line.parent, line.party)] += amount
+
+	def match(self, slip, slip_net: dict) -> dict:
+		if not slip.journal_entry:
+			return {"journal_net": None, "variance": None, "journal_status": "Missing JV"}
+		key = (slip.journal_entry, slip.employee)
+		if key in self.by_employee:
+			return self.result(self.by_employee[key], flt(slip.net_pay), per_employee=True)
+		# Booked in one line for the whole run, so the run's slips stand or fall together
+		return self.result(self.by_journal[slip.journal_entry], slip_net[slip.journal_entry], per_employee=False)
+
+	def result(self, booked: float, expected: float, per_employee: bool) -> dict:
+		variance = flt(booked - expected, 2)
+		return {
+			"journal_net": booked if per_employee else None,
+			"variance": variance if per_employee or variance else None,
+			"journal_status": "Confirmed" if not variance else "Discrepancy",
+		}
 
 
 def get_journal_lines(journals: set) -> list:

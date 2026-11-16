@@ -68,6 +68,7 @@
 			<template #cell-actions="{ row }">
 				<div class="flex justify-end gap-1.5" @click.stop>
 					<slot name="actions" :row="row" />
+					<Button size="sm" icon="lucide-eye" aria-label="Quick view" tooltip="Quick view" @click="quickView = row.name" />
 					<Button size="sm" icon-left="lucide-user" label="Profile" :route="employeeRoute(row.name)" />
 				</div>
 			</template>
@@ -75,6 +76,8 @@
 
 		<Pager v-model:page="state.page" v-model:page-size="state.pageSize" :total="filtered.length" />
 	</div>
+
+	<EmployeeQuickView :employee="quickView" :from="state.from" :to="state.to" @close="quickView = null" />
 </template>
 
 <script setup lang="ts">
@@ -83,6 +86,7 @@ import { useRouter } from "vue-router"
 import { Button } from "frappe-ui"
 import CollapsibleSection from "@/components/CollapsibleSection.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
+import EmployeeQuickView from "@/components/EmployeeQuickView.vue"
 import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
 import Pager from "@/components/Pager.vue"
@@ -103,6 +107,9 @@ defineSlots<{ toolbar?: () => any; actions?: (props: { row: Record<string, any> 
 const router = useRouter()
 // Top-level bindings, so the template reads them without .value
 const { state, rows, loading, error, tileCounts, viewCounts, filtered, pageRows, hasFilters } = props.overview
+
+// The employee whose quick view is open
+const quickView = ref<string | null>(null)
 const exporting = ref(false)
 
 const companyFilter = computed(() => (state.company ? { company: state.company } : undefined))

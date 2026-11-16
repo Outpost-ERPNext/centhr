@@ -7,12 +7,38 @@
 			<StatCard label="Deducted this cycle" :value="formatCurrency(sum(deductions, 'amount'))" tone="red" :loading="loading" />
 		</div>
 
+		<div
+			v-if="scope.company && data"
+			class="flex flex-wrap items-center gap-2 rounded-4 px-4 py-2.5 text-[13px]"
+			:class="data.auto_recovery ? 'bg-ch-green-bg text-ch-green-ink' : 'bg-ch-subtle text-ch-ink-2'"
+		>
+			<span class="size-4" :class="data.auto_recovery ? 'lucide-circle-check' : 'lucide-circle-pause'" />
+			<span>
+				<b>Auto-recovery {{ data.auto_recovery ? "active" : "inactive" }}.</b>
+				{{
+					data.auto_recovery
+						? `When payroll is generated for ${scope.company}, overdue advances are deducted from that cycle's salary.`
+						: `Overdue advances of ${scope.company} are deducted only when you recover them here. Turn it on in Payroll settings.`
+				}}
+			</span>
+		</div>
+
 		<section class="rounded-5 border border-ch-line bg-ch-surface">
 			<header class="flex flex-wrap items-center gap-2 border-b border-ch-line px-4 py-2.5">
 				<h3 class="text-[14px] font-medium text-ch-ink">Pending employee advances</h3>
 				<span class="text-[12.5px] text-ch-ink-3">Paid, not yet settled by an expense claim, a return or payroll</span>
+				<Button
+					v-if="scope.company && can('Additional Salary').create"
+					class="ml-auto"
+					size="sm"
+					icon-left="lucide-hand-coins"
+					:label="`Recover all due (${dueCount})`"
+					:disabled="!dueCount"
+					:loading="recoveringAll"
+					@click="confirmRecoverAll"
+				/>
 			</header>
-			<DataTable :columns="advanceColumns" :rows="advances" :loading="loading" :error="error" empty-icon="lucide-hand-coins" empty-message="No unrecovered advances" min-width="900px" @row-click="(row) => openDesk('employee-advance', row.name)">
+			<DataTable :columns="advanceColumns" :rows="advances" :loading="loading" :error="error" empty-icon="lucide-hand-coins" empty-message="No unrecovered advances" min-width="1000px" @row-click="(row) => openDesk('employee-advance', row.name)">
 				<template #cell-employee_name="{ row }">
 					<div class="min-w-0">
 						<div class="truncate font-medium text-ch-ink">{{ row.employee_name }}</div>
@@ -67,12 +93,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { Button, Dialog, toast } from "frappe-ui"
+import { Button, Dialog, dialog, toast } from "frappe-ui"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import LinkField from "@/components/fields/LinkField.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
-import { getAdvances, recoverAdvance, useTabData, type Scope } from "@/data/payrollDashboard"
+import { cycleLabel } from "@/data/payroll"
+import { getAdvances, recoverAdvance, recoverOverdueAdvances, useTabData, type Scope } from "@/data/payrollDashboard"
+import { can } from "@/data/permissions"
 import { formatCurrency, formatDateShort } from "@/utils/format"
 
 const props = defineProps<{ scope: Scope }>()
@@ -81,6 +109,28 @@ const { data, loading, error, reload } = useTabData(props.scope, getAdvances)
 const advances = computed(() => data.value?.advances || [])
 const deductions = computed(() => data.value?.deductions || [])
 const sum = (rows: Record<string, any>[], key: string) => rows.reduce((total, r) => total + (r[key] || 0), 0)
+
+// Due in this cycle and not scheduled for deduction yet
+const dueCount = computed(() => advances.value.filter((r) => r.overdue && !r.recovery_scheduled).length)
+const recoveringAll = ref(false)
+
+function confirmRecoverAll() {
+	dialog.confirm({
+		title: "Recover all due advances",
+		message: `Deduct ${dueCount.value} overdue advances of ${props.scope.company} from the salaries of ${cycleLabel(props.scope.from, props.scope.to)}? Advances with an expense claim still in approval are skipped.`,
+		confirmLabel: "Recover",
+		onConfirm: async () => {
+			recoveringAll.value = true
+			try {
+				const count = await recoverOverdueAdvances(props.scope)
+				toast.success(`${count} deductions added to this cycle`)
+				await reload()
+			} finally {
+				recoveringAll.value = false
+			}
+		},
+	})
+}
 
 const recoverOpen = ref(false)
 const recovering = ref<Record<string, any> | null>(null)
@@ -113,6 +163,7 @@ const money = (label: string, key: string): Column => ({ key, label, width: "min
 const advanceColumns: Column[] = [
 	{ key: "employee_name", label: "Employee", width: "minmax(200px,1.8fr)" },
 	{ key: "posting_date", label: "Date", width: "100px", format: (v) => formatDateShort(v) },
+	{ key: "due_date", label: "Due", width: "100px", format: (v) => (v ? formatDateShort(v) : "—") },
 	money("Advance", "advance_amount"),
 	money("Paid", "paid_amount"),
 	money("Pending", "pending_amount"),

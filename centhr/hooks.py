@@ -102,6 +102,7 @@ after_install = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.customization.payroll.create_custom_fields",
 	"centhr.customization.employee_advance.create_custom_fields",
 	"centhr.customization.expense_claim.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
@@ -114,6 +115,7 @@ after_migrate = [
 	"centhr.customization.employee.create_custom_fields",
 	"centhr.customization.leave_application.create_custom_fields",
 	"centhr.customization.payroll_entry.create_custom_fields",
+	"centhr.customization.payroll.create_custom_fields",
 	"centhr.customization.employee_advance.create_custom_fields",
 	"centhr.customization.expense_claim.create_custom_fields",
 	"centhr.leave_policy.setup.setup_leave_policy",
@@ -202,6 +204,7 @@ doc_events = {
 	"Employee": {
 		"validate": [
 			"centhr.customization.employee.validate_cross_company",
+			"centhr.customization.payroll.validate_line_manager",
 			"centhr.api.holiday_list.set_employee_holiday_list",
 		],
 		"after_insert": "centhr.api.post.employee.enqueue_employee_sync",
