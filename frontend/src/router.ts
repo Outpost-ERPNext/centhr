@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Cost Center", "Channel", "Employment Type", "Gender", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment", "Employee Advance", "Expense Claim", "IOU and Loans"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Cost Center", "Channel", "Employment Type", "Gender", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment", "Employee Advance", "Expense Claim", "IOU and Loans", "PMS Settings", "PMS Question", "PMS Question Trait", "KPI UOM", "KPI Template", "KPI Result"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -179,6 +179,44 @@ const routes: RouteRecordRaw[] = [
 				name: "IOUDashboard",
 				component: () => import("@/pages/iou/IOUDashboard.vue"),
 			},
+			// A KPI Result is made by submitting a KPI Template, so it has no "new" page
+			{ path: "pms/kpi-results", name: "KpiResultList", component: () => import("@/pages/pms/kpi/KpiDashboard.vue") },
+			{
+				path: "pms/kpi-results/:name",
+				name: "KpiResultDetail",
+				component: () => import("@/pages/pms/kpi/KpiResultDetail.vue"),
+				props: true,
+			},
+			...docRoutes(
+				"pms/kpi-templates",
+				"KpiTemplate",
+				() => import("@/pages/pms/kpi/KpiTemplateList.vue"),
+				() => import("@/pages/pms/kpi/KpiTemplateDetail.vue")
+			),
+			...docRoutes(
+				"pms/settings",
+				"PmsSettings",
+				() => import("@/pages/pms/settings/PmsSettingsList.vue"),
+				() => import("@/pages/pms/settings/PmsSettingsDetail.vue")
+			),
+			...docRoutes(
+				"pms/questions",
+				"PmsQuestion",
+				() => import("@/pages/pms/questions/PmsQuestionList.vue"),
+				() => import("@/pages/pms/questions/PmsQuestionDetail.vue")
+			),
+			...docRoutes(
+				"pms/question-traits",
+				"PmsQuestionTrait",
+				() => import("@/pages/pms/question-traits/PmsQuestionTraitList.vue"),
+				() => import("@/pages/pms/question-traits/PmsQuestionTraitDetail.vue")
+			),
+			...docRoutes(
+				"pms/kpi-uoms",
+				"KpiUom",
+				() => import("@/pages/pms/kpi-uoms/KpiUomList.vue"),
+				() => import("@/pages/pms/kpi-uoms/KpiUomDetail.vue")
+			),
 		] as RouteRecordRaw[],
 	},
 	{ path: "/:pathMatch(.*)*", redirect: "/" },

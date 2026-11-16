@@ -345,10 +345,21 @@ scheduler_events = {
 		"centhr.leave_policy.allocation.accrue_annual_leave",
 		"centhr.iou.scheduler.send_due_reminders",
 		"centhr.iou.scheduler.schedule_salary_recovery",
+		"centhr.pms.kpi.copy_templates_to_current_month",
 	],
 	"hourly": [
 		"centhr.iou.scheduler.escalate_to_proxies",
 	],
+}
+
+permission_query_conditions = {
+	"KPI Template": "centhr.pms.permissions.get_permission_query_conditions",
+	"KPI Result": "centhr.pms.permissions.get_permission_query_conditions",
+}
+
+has_permission = {
+	"KPI Template": "centhr.pms.permissions.has_permission",
+	"KPI Result": "centhr.pms.permissions.has_permission",
 }
 
 # Testing

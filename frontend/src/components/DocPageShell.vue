@@ -53,6 +53,7 @@
 						:name-label="nameLabel"
 						:field-options="fieldOptions"
 						:buttons="buttons"
+						:fixed-tables="fixedTables"
 						@change="(f, v) => $emit('change', f, v)"
 					/>
 					<template v-else>
@@ -144,6 +145,8 @@ const props = defineProps<{
 	fieldOptions?: Record<string, { label: string; value: string }[]>
 	/** Handlers for the DocType's Button fields in the form. */
 	buttons?: Record<string, FormButton>
+	/** Table fields whose rows cannot be added or deleted. */
+	fixedTables?: string[]
 	/** Show every field in the read view, including empty ones. */
 	showEmpty?: boolean
 	/** Extra read-only tabs, inserted after the given tab name (or appended). */

@@ -200,6 +200,23 @@ const groups: { label: string; items: NavItem[] }[] = [
 			},
 		],
 	},
+	{
+		label: "Performance",
+		items: [
+			{ label: "KPI Dashboard", icon: "lucide-target", route: "/pms/kpi-results", doctype: "KPI Result" },
+			{ label: "KPI Templates", icon: "lucide-clipboard-list", route: "/pms/kpi-templates", doctype: "KPI Template" },
+			{
+				label: "PMS Setup",
+				icon: "lucide-sliders-horizontal",
+				children: [
+					{ label: "PMS Settings", icon: "lucide-settings", route: "/pms/settings", doctype: "PMS Settings" },
+					{ label: "Question Bank", icon: "lucide-list-checks", route: "/pms/questions", doctype: "PMS Question" },
+					{ label: "Question Traits", icon: "lucide-tags", route: "/pms/question-traits", doctype: "PMS Question Trait" },
+					{ label: "KPI UOM", icon: "lucide-ruler", route: "/pms/kpi-uoms", doctype: "KPI UOM" },
+				],
+			},
+		],
+	},
 ]
 
 // Only modules the user can read; the server checks again on every request

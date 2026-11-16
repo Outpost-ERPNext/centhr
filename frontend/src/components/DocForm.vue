@@ -63,6 +63,7 @@
 											/>
 										</div>
 										<ChildTable
+											:fixed-rows="fixedTables?.includes(field.fieldname)"
 											v-else-if="field.fieldtype === 'Table' || field.fieldtype === 'Table MultiSelect'"
 											class="md:col-span-2"
 											:model-value="doc[field.fieldname]"
@@ -128,6 +129,8 @@ const props = defineProps<{
 	readOnlyFields?: string[]
 	/** Label of the name input for DocTypes the user names ("prompt"). */
 	nameLabel?: string
+	/** Table fields whose rows cannot be added or deleted. */
+	fixedTables?: string[]
 	/** Choices of Autocomplete fields, like `set_data` in a Desk form script. */
 	fieldOptions?: Record<string, { label: string; value: string }[]>
 	/** Handlers for Button fields; a Button field without one is left out, as it does nothing here. */

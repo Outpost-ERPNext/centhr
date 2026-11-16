@@ -22,6 +22,12 @@ const ROUTES: Record<string, string> = {
 	"Salary Structure": "/salary-structures",
 	"Payroll Entry": "/payroll-processing/payroll-entries",
 	"Salary Slip": "/payroll-processing/salary-slips",
+	"PMS Settings": "/pms/settings",
+	"PMS Question": "/pms/questions",
+	"PMS Question Trait": "/pms/question-traits",
+	"KPI UOM": "/pms/kpi-uoms",
+	"KPI Template": "/pms/kpi-templates",
+	"KPI Result": "/pms/kpi-results",
 }
 
 export function routeFor(doctype: string | undefined, name: string | null | undefined): string | null {

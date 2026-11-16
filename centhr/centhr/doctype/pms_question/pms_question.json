@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-11-16 10:00:00.000000",
+ "description": "A question of the 360 review question bank.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "question",
+  "question_description",
+  "column_break_scope",
+  "question_head",
+  "is_a_general_question",
+  "department",
+  "designation"
+ ],
+ "fields": [
+  {
+   "default": "QTN-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "QTN-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "question",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "fieldname": "question_description",
+   "fieldtype": "Small Text",
+   "label": "Question Description"
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Non KPI",
+   "fieldname": "question_head",
+   "fieldtype": "Select",
+   "label": "Question Head",
+   "options": "Non KPI"
+  },
+  {
+   "default": "0",
+   "description": "Asked for every employee. Other questions are asked only in their department or designation.",
+   "fieldname": "is_a_general_question",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is a General Question"
+  },
+  {
+   "depends_on": "eval:!doc.is_a_general_question",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "depends_on": "eval:!doc.is_a_general_question",
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Designation",
+   "options": "Designation"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Question",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "write": 1
+  }
+ ],
+ "search_fields": "question",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "question"
+}

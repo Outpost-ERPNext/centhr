@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-11-16 10:00:00.000000",
+ "description": "The PMS policy of one company: score weights, score bands and increment bands.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "company_logo",
+  "column_break_weights",
+  "overall_kpi_weight",
+  "overall__360_weight",
+  "kpi_freeze_day",
+  "score_bands_section",
+  "kpi_score",
+  "column_break_overall",
+  "overall_score",
+  "increments_section",
+  "increments",
+  "channel_section",
+  "pms__channel"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "set_only_once": 1,
+   "unique": 1
+  },
+  {
+   "description": "Shown on the review page.",
+   "fieldname": "company_logo",
+   "fieldtype": "Attach Image",
+   "label": "Company Logo"
+  },
+  {
+   "fieldname": "column_break_weights",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Share of the monthly KPI average in the overall score, in percent.",
+   "fieldname": "overall_kpi_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Overall KPI Weight"
+  },
+  {
+   "default": "0",
+   "description": "Share of the 360 review score in the overall score, in percent.",
+   "fieldname": "overall__360_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Overall 360 Weight"
+  },
+  {
+   "default": "0",
+   "description": "Day of the following month after which a month's KPI Templates can no longer be changed. 0 never freezes them. System Managers can always change them.",
+   "fieldname": "kpi_freeze_day",
+   "fieldtype": "Int",
+   "label": "KPI Freeze Day",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "score_bands_section",
+   "fieldtype": "Section Break",
+   "label": "Score Bands"
+  },
+  {
+   "description": "Remark of a monthly KPI score.",
+   "fieldname": "kpi_score",
+   "fieldtype": "Table",
+   "label": "KPI Score",
+   "options": "PMS Score Details"
+  },
+  {
+   "fieldname": "column_break_overall",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Remark of the overall score.",
+   "fieldname": "overall_score",
+   "fieldtype": "Table",
+   "label": "Overall Score",
+   "options": "PMS Score Details"
+  },
+  {
+   "fieldname": "increments_section",
+   "fieldtype": "Section Break",
+   "label": "Increments"
+  },
+  {
+   "description": "What an overall score leads to on the Score Sheet.",
+   "fieldname": "increments",
+   "fieldtype": "Table",
+   "label": "Increments",
+   "options": "PMS Settings Increment"
+  },
+  {
+   "fieldname": "channel_section",
+   "fieldtype": "Section Break",
+   "label": "PMS Channel"
+  },
+  {
+   "fieldname": "pms__channel",
+   "fieldtype": "Table",
+   "label": "PMS Channel Details",
+   "options": "PMS Channel"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Settings",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "company"
+}

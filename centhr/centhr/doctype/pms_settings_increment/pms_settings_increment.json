@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-11-16 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "score",
+  "status",
+  "increment_"
+ ],
+ "fields": [
+  {
+   "description": "A range such as 80-100, a single score such as 100, or >100 for anything above.",
+   "fieldname": "score",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Score",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nFire\nPIP\nIncrement"
+  },
+  {
+   "fieldname": "increment_",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Increment %"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Settings Increment",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

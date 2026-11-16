@@ -45,7 +45,7 @@
 										@click="toggle(index)"
 									/>
 									<Button
-										v-if="!readOnly"
+										v-if="!readOnly && !fixedRows"
 										variant="ghost"
 										icon="lucide-trash-2"
 										aria-label="Delete row"
@@ -82,7 +82,7 @@
 				</tbody>
 			</table>
 		</div>
-		<div v-if="!readOnly">
+		<div v-if="!readOnly && !fixedRows">
 			<Button size="sm" icon-left="lucide-plus" label="Add row" @click="addRow" />
 		</div>
 	</div>
@@ -96,7 +96,14 @@ import { getMeta, NO_VALUE_TYPES, type DocField } from "@/data/meta"
 import { displayValue } from "@/utils/format"
 import FieldControl from "./FieldControl.vue"
 
-const props = defineProps<{ field: DocField; modelValue: Record<string, any>[] | null; readOnly?: boolean; required?: boolean }>()
+const props = defineProps<{
+	field: DocField
+	modelValue: Record<string, any>[] | null
+	readOnly?: boolean
+	required?: boolean
+	/** The rows are given, for example copied from another document; only their cells can change. */
+	fixedRows?: boolean
+}>()
 const emit = defineEmits<{ "update:modelValue": [rows: Record<string, any>[]] }>()
 
 const childDoctype = computed(() => props.field.options || "")

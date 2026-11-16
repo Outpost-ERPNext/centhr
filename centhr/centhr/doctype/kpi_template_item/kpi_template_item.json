@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "creation": "2026-11-16 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "kpi",
+  "uom",
+  "target",
+  "weight",
+  "polarity",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "kpi",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "KPI",
+   "reqd": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "UOM",
+   "options": "KPI UOM",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Target",
+   "reqd": 1
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Weight",
+   "options": "5\n10\n15\n20\n25\n30\n35\n40\n45\n50\n55\n60\n65\n70\n75\n80\n85\n90\n95\n100",
+   "reqd": 1
+  },
+  {
+   "default": "Positive",
+   "description": "Positive: higher is better. Negative: lower is better.",
+   "fieldname": "polarity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Polarity",
+   "options": "Positive\nNegative"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-16 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "KPI Template Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
