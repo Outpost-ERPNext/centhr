@@ -1,0 +1,277 @@
+{
+ "actions": [],
+ "creation": "2026-11-17 14:00:00.000000",
+ "description": "What an employee's overall score for a quarter leads to: the increment, PIP or exit, and the new CTC. It records the decision; payroll is not changed.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "fiscal_year",
+  "quarter",
+  "column_break_org",
+  "company",
+  "department",
+  "pms_questionnaire",
+  "status",
+  "score_section",
+  "kpi_score",
+  "review_score",
+  "calculated_score",
+  "column_break_score",
+  "check_normalized_score",
+  "normalized_score",
+  "increment_section",
+  "outcome",
+  "increment",
+  "effective_date",
+  "column_break_ctc",
+  "currency",
+  "old_ctc",
+  "new_ctc",
+  "ctc_impact",
+  "remarks_section",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fiscal Year",
+   "options": "Fiscal Year",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "quarter",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Quarter",
+   "options": "Q1\nQ2\nQ3\nQ4",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_org",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pms_questionnaire",
+   "fieldtype": "Link",
+   "label": "PMS Questionnaire",
+   "options": "PMS Questionnaire",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "score_section",
+   "fieldtype": "Section Break",
+   "label": "Score"
+  },
+  {
+   "description": "Average of the quarter's monthly KPI scores.",
+   "fieldname": "kpi_score",
+   "fieldtype": "Float",
+   "label": "KPI Score",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "review_score",
+   "fieldtype": "Float",
+   "label": "360 Score",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "calculated_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Overall Score",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_score",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Use the normalized score for the increment instead of the overall score.",
+   "fieldname": "check_normalized_score",
+   "fieldtype": "Check",
+   "label": "Normalize Score"
+  },
+  {
+   "depends_on": "eval:doc.check_normalized_score",
+   "fieldname": "normalized_score",
+   "fieldtype": "Float",
+   "label": "Normalized Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "increment_section",
+   "fieldtype": "Section Break",
+   "label": "Increment"
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Outcome",
+   "options": "\nIncrement\nPIP\nFire",
+   "read_only": 1
+  },
+  {
+   "fieldname": "increment",
+   "fieldtype": "Float",
+   "label": "Increment %",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date"
+  },
+  {
+   "fieldname": "column_break_ctc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "description": "Base of the employee's latest Salary Structure Assignment.",
+   "fieldname": "old_ctc",
+   "fieldtype": "Currency",
+   "label": "Old CTC",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_ctc",
+   "fieldtype": "Currency",
+   "label": "New CTC",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ctc_impact",
+   "fieldtype": "Currency",
+   "label": "CTC Impact",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks_section",
+   "fieldtype": "Section Break",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "PMS Score Sheet",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-11-17 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Score Sheet",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "search_fields": "employee_name, fiscal_year, quarter",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name"
+}

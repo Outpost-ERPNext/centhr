@@ -346,6 +346,7 @@ scheduler_events = {
 		"centhr.iou.scheduler.send_due_reminders",
 		"centhr.iou.scheduler.schedule_salary_recovery",
 		"centhr.pms.kpi.copy_templates_to_current_month",
+		"centhr.pms.peers.refresh_all_companies",
 	],
 	"hourly": [
 		"centhr.iou.scheduler.escalate_to_proxies",

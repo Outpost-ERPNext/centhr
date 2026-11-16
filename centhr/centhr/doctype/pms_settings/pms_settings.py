@@ -16,6 +16,7 @@ class PMSSettings(Document):
 		self.validate_weights()
 		self.validate_bands()
 		self.validate_increments()
+		self.validate_grade_levels()
 
 	def validate_weights(self):
 		"""The overall score is KPI average x KPI weight + 360 score x 360 weight, so they share 100%."""
@@ -40,6 +41,11 @@ class PMSSettings(Document):
 				frappe.throw(
 					_("Row {0} of Increments: set Increment % to a number, such as 10.").format(row.idx)
 				)
+
+	def validate_grade_levels(self):
+		grades = [row.grade for row in self.grade_levels]
+		if len(grades) != len(set(grades)):
+			frappe.throw(_("Grade Levels lists the same grade twice."))
 
 
 def get_settings(company: str) -> PMSSettings:

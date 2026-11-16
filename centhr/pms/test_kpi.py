@@ -7,13 +7,18 @@ from frappe.tests import IntegrationTestCase
 from centhr.pms import kpi
 from centhr.pms.period import KpiMonth
 from centhr.pms.scoring import kpi_remark, score_kpi_result
+from centhr.pms.testing import (
+	KPI_ITEMS,
+	get_fiscal_year_2031,
+	make_department,
+	make_employee,
+	make_settings,
+	make_uom,
+	make_user,
+)
 
 # The employees, users and settings are created in the test transaction and rolled back with it
-UOM = "_Test PMS %"
-ITEMS = [
-	{"kpi": "Sales closed", "uom": UOM, "target": 100, "weight": "60", "polarity": "Positive"},
-	{"kpi": "Complaints", "uom": UOM, "target": 5, "weight": "40", "polarity": "Negative"},
-]
+ITEMS = KPI_ITEMS
 
 
 def row(**values):
@@ -69,7 +74,7 @@ class TestKpiCycle(IntegrationTestCase):
 		cls.addClassCleanup(frappe.clear_document_cache, "PMS Settings", cls.company)
 		cls.fiscal_year = get_fiscal_year_2031()
 		make_settings(cls.company)
-		frappe.get_doc({"doctype": "KPI UOM", "name1": UOM}).insert()
+		make_uom()
 
 		cls.department = make_department(cls.company, "_Test PMS Sales")
 		cls.manager = make_employee(
@@ -269,78 +274,3 @@ class TestKpiMonth(IntegrationTestCase):
 			self.assertEqual(KpiMonth("2031-2032", "Jan").start, date(2032, 1, 1))
 			self.assertEqual(KpiMonth("2031-2032", "Dec").freeze_date(2), date(2032, 1, 2))
 			self.assertEqual(KpiMonth("2031-2032", "Jan").freeze_date(31), date(2032, 2, 29))
-
-
-def get_fiscal_year_2031() -> str:
-	"""The calendar year 2031: far enough ahead to have no KPI records. Fiscal years cannot overlap,
-	so a site that has this year already uses its own."""
-	year = {"year_start_date": "2031-01-01", "year_end_date": "2031-12-31"}
-	existing = frappe.db.get_value("Fiscal Year", year, "name")
-	return (
-		existing or frappe.get_doc({"doctype": "Fiscal Year", "year": "_Test PMS 2031", **year}).insert().name
-	)
-
-
-def make_settings(company: str) -> None:
-	settings = (
-		frappe.get_doc("PMS Settings", company)
-		if frappe.db.exists("PMS Settings", company)
-		else frappe.get_doc({"doctype": "PMS Settings", "company": company})
-	)
-	settings.update({"overall_kpi_weight": 70, "overall__360_weight": 30, "kpi_freeze_day": 0})
-	settings.set("kpi_score", [{"score": "0-50", "remark": "Below"}, {"score": "51-100", "remark": "Met"}])
-	settings.save()
-
-
-def make_department(company: str, name: str) -> str:
-	parent = frappe.db.get_value(
-		"Department", {"is_group": 1, "parent_department": ["is", "not set"]}, "name"
-	)
-	return (
-		frappe.get_doc(
-			{
-				"doctype": "Department",
-				"department_name": name,
-				"company": company,
-				"parent_department": parent,
-			}
-		)
-		.insert()
-		.name
-	)
-
-
-def make_user(name: str, roles: list[str]) -> str:
-	user = frappe.get_doc(
-		{
-			"doctype": "User",
-			"email": f"{name.lower()}@pms-test.example",
-			"first_name": name,
-			"send_welcome_email": 0,
-			"roles": [{"role": role} for role in roles],
-		}
-	).insert()
-	return user.name
-
-
-def make_employee(
-	company: str, first_name: str, department: str, reports_to: str | None = None, roles=("PMS User",)
-):
-	employee = frappe.get_doc(
-		{
-			"doctype": "Employee",
-			"first_name": first_name,
-			"last_name": "PMS Test",
-			"company": company,
-			"department": department,
-			"gender": frappe.db.get_value("Gender", {}, "name"),
-			"date_of_birth": "1990-01-01",
-			"date_of_joining": "2020-01-01",
-			"status": "Active",
-			"reports_to": reports_to,
-			"user_id": make_user(f"pms-{first_name}", list(roles)),
-		}
-	)
-	# The payroll fields CentHR makes mandatory on Employee do not matter here
-	employee.flags.ignore_mandatory = True
-	return employee.insert()

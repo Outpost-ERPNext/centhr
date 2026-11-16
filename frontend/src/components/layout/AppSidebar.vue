@@ -205,6 +205,20 @@ const groups: { label: string; items: NavItem[] }[] = [
 		items: [
 			{ label: "KPI Dashboard", icon: "lucide-target", route: "/pms/kpi-results", doctype: "KPI Result" },
 			{ label: "KPI Templates", icon: "lucide-clipboard-list", route: "/pms/kpi-templates", doctype: "KPI Template" },
+			{ label: "My Reviews", icon: "lucide-clipboard-check", route: "/pms/reviews", doctypes: ["KPI Result", "PMS Form Allocation"] },
+			{ label: "Overall Scores", icon: "lucide-gauge", route: "/pms/overall-scores", doctype: "KPI Result" },
+			{
+				label: "360 Review",
+				icon: "lucide-orbit",
+				children: [
+					{ label: "360 Setup", icon: "lucide-settings-2", route: "/pms/360-setup", doctype: "PMS 360 Degree" },
+					{ label: "Create PMS Form", icon: "lucide-file-plus", route: "/pms/create-form", doctype: "PMS Questionnaire" },
+					{ label: "Form Dashboard", icon: "lucide-layout-list", route: "/pms/questionnaires", doctype: "PMS Questionnaire" },
+					{ label: "Submission Status", icon: "lucide-list-checks", route: "/pms/review-status", doctype: "PMS Form Allocation" },
+					{ label: "Score Sheets", icon: "lucide-receipt-text", route: "/pms/score-sheets", doctype: "PMS Score Sheet" },
+				],
+			},
+			{ label: "Peer Mapping", icon: "lucide-users-round", route: "/pms/relationships", doctype: "PMS Employee Relationship" },
 			{
 				label: "PMS Setup",
 				icon: "lucide-sliders-horizontal",

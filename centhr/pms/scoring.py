@@ -101,3 +101,35 @@ def kpi_remark(score: float, bands: list) -> str:
 	if score <= 70:
 		return _("Good Performance")
 	return _("Excellent Performance")
+
+
+MAX_RATING = 5
+
+
+def average_rating(ratings: list[float]) -> float:
+	"""The average of a review's ratings, to the nearest half."""
+	return round(sum(ratings) / len(ratings) * 2) / 2
+
+
+def rating_score(average: float, weight: float) -> float:
+	"""A review's average as a percentage of the top rating, times the weight of that kind of reviewer."""
+	return round(average / MAX_RATING * 100 * flt(weight) / 100)
+
+
+def review_score(reviews: list[tuple[float, float]]) -> float | None:
+	"""An employee's 360 score out of 100, from the (rating score, weight) of each review received:
+	the reviews' average, weighted by the kind of reviewer."""
+	weight = sum(flt(review_weight) for _score, review_weight in reviews)
+	if not weight:
+		return None
+	return round(sum(flt(score) for score, _weight in reviews) / (weight / 100), 2)
+
+
+def overall_score(kpi_score: float | None, review: float | None, settings) -> float | None:
+	"""KPI score and 360 score in the company's proportions, out of 100. None until both are known."""
+	if kpi_score is None or review is None:
+		return None
+	kpi_weight, review_weight = flt(settings.overall_kpi_weight), flt(settings.overall__360_weight)
+	if not kpi_weight + review_weight:
+		return None
+	return min(round(flt(kpi_score) * kpi_weight / 100 + flt(review) * review_weight / 100, 2), 100.0)

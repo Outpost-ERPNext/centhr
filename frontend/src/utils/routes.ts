@@ -28,6 +28,10 @@ const ROUTES: Record<string, string> = {
 	"KPI UOM": "/pms/kpi-uoms",
 	"KPI Template": "/pms/kpi-templates",
 	"KPI Result": "/pms/kpi-results",
+	"PMS Employee Relationship": "/pms/relationships",
+	"PMS 360 Degree": "/pms/360-setup",
+	"PMS Questionnaire": "/pms/questionnaires",
+	"PMS Score Sheet": "/pms/score-sheets",
 }
 
 export function routeFor(doctype: string | undefined, name: string | null | undefined): string | null {

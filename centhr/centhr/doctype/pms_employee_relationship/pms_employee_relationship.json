@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "autoname": "field:employee",
+ "creation": "2026-11-17 10:00:00.000000",
+ "description": "Who reviews an employee in the 360 review: their line manager and up to 2 peers.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "company",
+  "locked",
+  "column_break_org",
+  "department",
+  "designation",
+  "grade",
+  "line_manager_section",
+  "line_manager",
+  "column_break_manager",
+  "line_manager_name",
+  "line_manager_designation",
+  "peers_section",
+  "peers",
+  "peer_names"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "set_only_once": 1,
+   "unique": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "A locked mapping is left alone by the peer mapping run and cannot be edited until it is unlocked.",
+   "fieldname": "locked",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Locked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_org",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Link",
+   "label": "Grade",
+   "options": "Employee Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "line_manager_section",
+   "fieldtype": "Section Break",
+   "label": "Line Manager"
+  },
+  {
+   "fieldname": "line_manager",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Line Manager",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_manager",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "line_manager.employee_name",
+   "fieldname": "line_manager_name",
+   "fieldtype": "Data",
+   "label": "Line Manager Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "line_manager.designation",
+   "fieldname": "line_manager_designation",
+   "fieldtype": "Link",
+   "label": "Line Manager Designation",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "peers_section",
+   "fieldtype": "Section Break",
+   "label": "Peers"
+  },
+  {
+   "description": "Up to 2 colleagues of the same company who review this employee in the 360 review.",
+   "fieldname": "peers",
+   "fieldtype": "Table",
+   "label": "Peers",
+   "options": "PMS Peers and Subordinates"
+  },
+  {
+   "fieldname": "peer_names",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Peer Names",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-17 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Employee Relationship",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "search_fields": "employee_name",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name"
+}

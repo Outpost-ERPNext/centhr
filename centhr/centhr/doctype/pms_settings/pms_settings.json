@@ -18,6 +18,8 @@
   "overall_score",
   "increments_section",
   "increments",
+  "peer_mapping_section",
+  "grade_levels",
   "channel_section",
   "pms__channel"
  ],
@@ -101,6 +103,18 @@
    "fieldtype": "Table",
    "label": "Increments",
    "options": "PMS Settings Increment"
+  },
+  {
+   "fieldname": "peer_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Peer Mapping"
+  },
+  {
+   "description": "The company's grades, lowest first. An employee with too few peers in their own grade gets peers from the grade one row above theirs in this list.",
+   "fieldname": "grade_levels",
+   "fieldtype": "Table",
+   "label": "Grade Levels",
+   "options": "PMS Grade Level"
   },
   {
    "fieldname": "channel_section",

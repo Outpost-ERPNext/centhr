@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "creation": "2026-11-17 14:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "department",
+  "superior",
+  "superior_weight",
+  "peers",
+  "peers_weight"
+ ],
+ "fields": [
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Department",
+   "options": "Department",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "superior",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Line Manager Reviews"
+  },
+  {
+   "default": "60",
+   "fieldname": "superior_weight",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Line Manager Weight",
+   "non_negative": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "peers",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Peers Review"
+  },
+  {
+   "default": "40",
+   "description": "The weight of each peer's review.",
+   "fieldname": "peers_weight",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Peer Weight",
+   "non_negative": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-17 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS 360 Degree Departments",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

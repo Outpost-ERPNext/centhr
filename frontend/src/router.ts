@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { isLoggedIn, loadUser } from "@/data/session"
 import { loadPermissions } from "@/data/permissions"
 
-export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Cost Center", "Channel", "Employment Type", "Gender", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment", "Employee Advance", "Expense Claim", "IOU and Loans", "PMS Settings", "PMS Question", "PMS Question Trait", "KPI UOM", "KPI Template", "KPI Result"]
+export const APP_DOCTYPES = ["Employee", "Leave Application", "Leave Allocation", "Leave Type", "Attendance", "Attendance Request", "Employee Checkin", "Shift Type", "Shift Assignment", "Shift Assignment Tool", "Holiday List", "Department", "Employee Grade", "Designation", "Cost Center", "Channel", "Employment Type", "Gender", "Salary Structure Assignment", "Payroll Entry", "Salary Slip", "Salary Component", "Salary Structure", "Bulk Salary Structure Assignment", "Employee Advance", "Expense Claim", "IOU and Loans", "PMS Settings", "PMS Question", "PMS Question Trait", "KPI UOM", "KPI Template", "KPI Result", "PMS Employee Relationship", "PMS 360 Degree", "PMS Questionnaire", "PMS Form Allocation", "PMS Score Sheet"]
 
 /** List, new and detail routes for one DocType page set. */
 function docRoutes(path: string, name: string, list: () => Promise<any>, detail: () => Promise<any>) {
@@ -192,6 +192,42 @@ const routes: RouteRecordRaw[] = [
 				"KpiTemplate",
 				() => import("@/pages/pms/kpi/KpiTemplateList.vue"),
 				() => import("@/pages/pms/kpi/KpiTemplateDetail.vue")
+			),
+			...docRoutes(
+				"pms/360-setup",
+				"Pms360",
+				() => import("@/pages/pms/review/Pms360List.vue"),
+				() => import("@/pages/pms/review/Pms360Detail.vue")
+			),
+			{ path: "pms/create-form", name: "CreatePmsForm", component: () => import("@/pages/pms/review/CreatePmsForm.vue") },
+			// Questionnaires are made on Create PMS Form, so the list has no "new" page
+			{ path: "pms/questionnaires", name: "PmsQuestionnaireList", component: () => import("@/pages/pms/review/FormDashboard.vue") },
+			{
+				path: "pms/questionnaires/:name",
+				name: "PmsQuestionnaireDetail",
+				component: () => import("@/pages/pms/review/PmsQuestionnaireDetail.vue"),
+				props: true,
+			},
+			{ path: "pms/review-status", name: "PmsReviewStatus", component: () => import("@/pages/pms/review/ReviewStatus.vue") },
+			{ path: "pms/reviews", name: "MyReviews", component: () => import("@/pages/pms/review/MyReviews.vue") },
+			{
+				path: "pms/reviews/:allocation",
+				name: "ReviewForm",
+				component: () => import("@/pages/pms/review/ReviewForm.vue"),
+				props: true,
+			},
+			{ path: "pms/overall-scores", name: "OverallScores", component: () => import("@/pages/pms/results/OverallScores.vue") },
+			...docRoutes(
+				"pms/score-sheets",
+				"PmsScoreSheet",
+				() => import("@/pages/pms/results/ScoreSheetList.vue"),
+				() => import("@/pages/pms/results/ScoreSheetDetail.vue")
+			),
+			...docRoutes(
+				"pms/relationships",
+				"PmsRelationship",
+				() => import("@/pages/pms/relationships/PmsRelationshipList.vue"),
+				() => import("@/pages/pms/relationships/PmsRelationshipDetail.vue")
 			),
 			...docRoutes(
 				"pms/settings",

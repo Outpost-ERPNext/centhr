@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "creation": "2026-11-17 14:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "question",
+  "question_trait",
+  "question_head",
+  "added_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "question",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "fieldname": "question_trait",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Question Trait",
+   "options": "PMS Question Trait"
+  },
+  {
+   "default": "Non KPI",
+   "fieldname": "question_head",
+   "fieldtype": "Select",
+   "label": "Question Head",
+   "options": "\nNon KPI\nKPI"
+  },
+  {
+   "fieldname": "added_by",
+   "fieldtype": "Data",
+   "label": "Added By",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-17 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Questionnaire List",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

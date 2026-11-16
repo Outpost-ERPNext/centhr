@@ -1,0 +1,240 @@
+{
+ "actions": [],
+ "creation": "2026-11-17 14:00:00.000000",
+ "description": "One reviewer's ratings of one employee for a quarter.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pms_form_allocation",
+  "reviewer",
+  "reviewer_name",
+  "reviewee",
+  "reviewee_name",
+  "relationship_type",
+  "column_break_period",
+  "fiscal_year",
+  "quarter",
+  "company",
+  "department",
+  "pms_questionnaire",
+  "review_date",
+  "answers_section",
+  "pms_questionnaire_list",
+  "remarks",
+  "score_section",
+  "average_rating",
+  "rating_score",
+  "column_break_weights",
+  "superior_weight",
+  "peers_weight",
+  "status",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "pms_form_allocation",
+   "fieldtype": "Link",
+   "label": "PMS Form Allocation",
+   "options": "PMS Form Allocation",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reviewer",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reviewer",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "reviewer.employee_name",
+   "fieldname": "reviewer_name",
+   "fieldtype": "Data",
+   "label": "Reviewer Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reviewee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reviewee",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "reviewee.employee_name",
+   "fieldname": "reviewee_name",
+   "fieldtype": "Data",
+   "label": "Reviewee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "relationship_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Relationship",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_period",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Fiscal Year",
+   "options": "Fiscal Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quarter",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Quarter",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pms_questionnaire",
+   "fieldtype": "Link",
+   "label": "PMS Questionnaire",
+   "options": "PMS Questionnaire",
+   "read_only": 1
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Review Date"
+  },
+  {
+   "fieldname": "answers_section",
+   "fieldtype": "Section Break",
+   "label": "Answers"
+  },
+  {
+   "fieldname": "pms_questionnaire_list",
+   "fieldtype": "Table",
+   "label": "Answers",
+   "options": "PMS Question Form Answers",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "score_section",
+   "fieldtype": "Section Break",
+   "label": "Score"
+  },
+  {
+   "description": "The average of the ratings, to the nearest half.",
+   "fieldname": "average_rating",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Average Rating",
+   "read_only": 1
+  },
+  {
+   "description": "The average rating as a percentage, times the weight of this kind of reviewer.",
+   "fieldname": "rating_score",
+   "fieldtype": "Float",
+   "label": "Rating Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_weights",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "superior_weight",
+   "fieldtype": "Float",
+   "label": "Line Manager Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "peers_weight",
+   "fieldtype": "Float",
+   "label": "Peer Weight",
+   "read_only": 1
+  },
+  {
+   "default": "Completed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Completed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "PMS Question Form",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-11-17 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "PMS Question Form",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "search_fields": "reviewer_name, reviewee_name",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -47,3 +47,16 @@ class KpiMonth:
 	@property
 	def label(self) -> str:
 		return f"{self.month} {self.start.year}"
+
+
+# Calendar quarters, whatever month the fiscal year starts in
+QUARTERS = {
+	"Q1": ("Jan", "Feb", "Mar"),
+	"Q2": ("Apr", "May", "Jun"),
+	"Q3": ("Jul", "Aug", "Sep"),
+	"Q4": ("Oct", "Nov", "Dec"),
+}
+
+
+def quarter_of(month: str) -> str:
+	return next(quarter for quarter, months in QUARTERS.items() if month in months)

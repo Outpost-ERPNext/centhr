@@ -96,3 +96,19 @@ export async function getCurrentFiscalYear(): Promise<string> {
 export function currentMonth(): string {
 	return MONTHS[new Date().getMonth()]
 }
+
+export interface PeerMappingStats {
+	employees: number
+	created: number
+	locked: number
+	peers_added: number
+	peers_removed: number
+}
+
+export function runPeerMapping(company: string) {
+	return api<PeerMappingStats>(`${METHOD}.run_peer_mapping`, { company })
+}
+
+export function setPeerMappingLock(employee: string, locked: boolean) {
+	return api<boolean>(`${METHOD}.set_peer_mapping_lock`, { employee, locked: locked ? 1 : 0 })
+}
