@@ -53,6 +53,8 @@ export interface PayrollYear {
 	from_date: string
 	to_date: string
 	payroll_period: string | null
+	/** Set when the cycles come from the company's own cycle start day (Payroll settings). */
+	start_day?: number
 	periods: { from_date: string; to_date: string }[]
 }
 

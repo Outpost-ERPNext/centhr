@@ -141,3 +141,49 @@ def recover_overdue_advances(company: str, cycle_end, force: bool = False) -> li
 		for row in due
 		if row.name not in skipped
 	]
+
+
+ADVANCE_FIELDS = [
+	"name",
+	"employee",
+	"employee_name",
+	"department",
+	"company",
+	"status",
+	"docstatus",
+	"posting_date",
+	"due_date",
+	"purpose",
+	"purpose_type",
+	"currency",
+	"advance_amount",
+	"paid_amount",
+	"claimed_amount",
+	"return_amount",
+	"repay_unclaimed_amount_from_salary",
+]
+
+
+def get_advance_details(name: str) -> dict:
+	"""One employee advance for the quick view: its amounts, the expense claims that settled part of
+	it, and the salary deductions scheduled or made for it."""
+	doc = frappe.get_doc("Employee Advance", name)
+	doc.check_permission("read")
+	deductions = frappe.get_all(
+		"Additional Salary",
+		filters={"ref_doctype": "Employee Advance", "ref_docname": name, "docstatus": ["<", 2]},
+		fields=["name", "salary_component", "amount", "payroll_date", "docstatus"],
+		order_by="payroll_date asc",
+	)
+	claims = frappe.get_all(
+		"Expense Claim Advance",
+		filters={"employee_advance": name, "parenttype": "Expense Claim", "docstatus": ["<", 2]},
+		fields=["parent", "allocated_amount", "docstatus"],
+	)
+	return {
+		**{field: doc.get(field) for field in ADVANCE_FIELDS},
+		"outstanding_amount": outstanding(doc),
+		"recovery_scheduled": bool(deductions),
+		"deductions": deductions,
+		"claims": claims,
+	}

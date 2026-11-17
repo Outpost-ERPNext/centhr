@@ -7,7 +7,7 @@
 			<div class="w-[calc(50%-4px)] sm:w-44">
 				<LinkField v-model="department" doctype="Department" placeholder="Department" />
 			</div>
-			<PayrollCycleNav v-model:from="fromDate" v-model:to="toDate" :company="company" />
+			<PayrollCycleNav v-model:from="fromDate" v-model:to="toDate" show-rule :company="company" />
 			<span class="text-[13px] text-ch-ink-3">Not marked: <span class="tabular-nums text-ch-ink">{{ unmarked }}</span></span>
 			<span v-if="pendingCount" class="text-[13px] text-ch-ink-3">
 				Pending leave: <span class="tabular-nums text-ch-ink">{{ pendingCount }}</span>

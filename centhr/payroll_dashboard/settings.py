@@ -73,6 +73,8 @@ def get_years(start_day: int) -> list[dict]:
 			{
 				"label": str(year),
 				"payroll_period": None,
+				# Tells the page where these cycles come from, so it can say so
+				"start_day": start_day,
 				"from_date": periods[0][0],
 				"to_date": periods[-1][1],
 				"periods": [{"from_date": start, "to_date": end} for start, end in periods],

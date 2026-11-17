@@ -4,7 +4,7 @@
 			<p class="text-ch-ink-3">
 				Upload Finance's payroll sheet for {{ cycleLabel(scope.from, scope.to) }} to compare it with the salary slips here. The first row
 				names the columns: Employee ID and Net Pay are needed; Payment Days, Gross Pay and Total Deduction are compared when present.
-				Nothing is saved or changed.
+				Rows without a net pay are skipped. Nothing is saved or changed.
 			</p>
 			<div class="flex flex-wrap items-center gap-2">
 				<input ref="input" type="file" accept=".xlsx,.csv" class="hidden" @change="pick" />
@@ -15,6 +15,9 @@
 			<p v-if="error" class="rounded-4 bg-ch-red-bg px-3 py-2 text-ch-red-ink" role="alert">{{ error }}</p>
 
 			<template v-if="result">
+				<p v-if="result.ignored" class="rounded-4 bg-ch-subtle px-3 py-2 text-ch-ink-2">
+					{{ result.ignored }} rows of the sheet have no net pay and were not compared.
+				</p>
 				<SegmentedTabs v-model="filter" :tabs="tabs" />
 				<div class="max-h-[46vh] overflow-auto rounded-4 border border-ch-line">
 					<table class="w-full min-w-[720px] text-left">

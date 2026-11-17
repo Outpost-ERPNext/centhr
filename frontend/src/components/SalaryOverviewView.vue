@@ -9,7 +9,7 @@
 					<div class="w-56">
 						<FilterLink v-model="state.company" doctype="Company" placeholder="All companies" />
 					</div>
-					<PayrollCycleNav :company="state.company" :from="state.from" :to="state.to" @update:from="state.from = $event" @update:to="state.to = $event" />
+					<PayrollCycleNav show-rule :company="state.company" :from="state.from" :to="state.to" @update:from="state.from = $event" @update:to="state.to = $event" />
 				</template>
 				<Button class="ml-auto" icon-left="lucide-file-spreadsheet" label="Export to Excel" :loading="exporting" :disabled="!filtered.length" @click="exportRows" />
 			</div>

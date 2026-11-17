@@ -101,7 +101,10 @@ class TestPayrollRun(IntegrationTestCase):
 			for i, e in enumerate(self.staff)
 		]
 		ann, ben, cal = (e.name for e in self.staff)
-		sheet = f'Staff ID,Net Pay,Payment Days\n{ann},"1,000.00",31\n{ben},950,31\nGHOST-1,500,31\n'.encode()
+		# Cal's row and the second ghost's are in the sheet but were never filled in
+		sheet = (
+			f'Staff ID,Net Pay,Payment Days\n{ann},"1,000.00",31\n{ben},950,31\nGHOST-1,500,31\n{cal},,\nGHOST-2,,\n'
+		).encode()
 
 		with patch.object(Scope, "get_slips", return_value=slips):
 			result = reconcile.reconcile(self.scope, "master.csv", sheet)
@@ -111,6 +114,10 @@ class TestPayrollRun(IntegrationTestCase):
 			status, {ann: "Matched", ben: "Discrepancy", cal: "Missing in Excel", "GHOST-1": "Missing in ERP"}
 		)
 		self.assertEqual(next(r for r in result["rows"] if r["employee"] == ben)["variance"], 50)
+		self.assertEqual(result["ignored"], 2)
+		# A sheet with no net pay at all, such as an export of a cycle without slips, is refused
+		with self.assertRaisesRegex(frappe.ValidationError, "Net Pay"):
+			reconcile.reconcile(self.scope, "master.csv", f"Employee ID,Net Pay\n{ann},\n{ben},\n".encode())
 		with self.assertRaises(frappe.ValidationError):
 			reconcile.reconcile(self.scope, "master.csv", b"Name,Amount\nx,1\n")
 

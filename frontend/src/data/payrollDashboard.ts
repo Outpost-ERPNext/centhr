@@ -163,6 +163,8 @@ export interface ReconcileResult {
 	rows: ReconcileRow[]
 	summary: Record<ReconcileStatus, number>
 	columns: string[]
+	/** Rows of the sheet that have no net pay, so were not compared. */
+	ignored: number
 }
 
 /** Uploads Finance's master sheet and returns how it compares with the cycle's salary slips. Nothing is saved. */
@@ -220,3 +222,30 @@ export function useTabData<T>(scope: Scope, load: (scope: Scope) => Promise<T>) 
 export function change(now: number, before: number): number | null {
 	return before ? ((now - before) / before) * 100 : null
 }
+
+// Employee advance quick view
+
+export interface AdvanceDetails {
+	name: string
+	employee: string
+	employee_name: string
+	department: string | null
+	company: string
+	status: string
+	docstatus: number
+	posting_date: string
+	due_date: string | null
+	purpose: string | null
+	purpose_type: string | null
+	currency: string
+	advance_amount: number
+	paid_amount: number
+	claimed_amount: number
+	return_amount: number
+	outstanding_amount: number
+	repay_unclaimed_amount_from_salary: 0 | 1
+	recovery_scheduled: boolean
+	deductions: { name: string; salary_component: string; amount: number; payroll_date: string; docstatus: number }[]
+	claims: { parent: string; allocated_amount: number; docstatus: number }[]
+}
+export const getAdvanceDetails = (name: string) => api<AdvanceDetails>(`${METHOD}.get_advance_details`, { name })

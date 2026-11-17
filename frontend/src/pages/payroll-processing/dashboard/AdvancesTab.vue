@@ -38,7 +38,7 @@
 					@click="confirmRecoverAll"
 				/>
 			</header>
-			<DataTable :columns="advanceColumns" :rows="advances" :loading="loading" :error="error" empty-icon="lucide-hand-coins" empty-message="No unrecovered advances" min-width="1000px" @row-click="(row) => openDesk('employee-advance', row.name)">
+			<DataTable :columns="advanceColumns" :rows="advances" :loading="loading" :error="error" empty-icon="lucide-hand-coins" empty-message="No unrecovered advances" min-width="1000px" @row-click="(row) => (quickView = row.name)">
 				<template #cell-employee_name="{ row }">
 					<div class="min-w-0">
 						<div class="truncate font-medium text-ch-ink">{{ row.employee_name }}</div>
@@ -66,7 +66,7 @@
 				<h3 class="text-[14px] font-medium text-ch-ink">Deductions this cycle</h3>
 				<span class="text-[12.5px] text-ch-ink-3">Additional Salary deductions dated in the cycle</span>
 			</header>
-			<DataTable :columns="deductionColumns" :rows="deductions" :loading="loading" empty-icon="lucide-minus-circle" empty-message="No deductions in this cycle" min-width="760px" @row-click="(row) => openDesk('additional-salary', row.name)">
+			<DataTable :columns="deductionColumns" :rows="deductions" :loading="loading" empty-icon="lucide-minus-circle" empty-message="No deductions in this cycle" min-width="760px" @row-click="openDeduction">
 				<template #cell-ref_docname="{ row }">
 					<span class="text-ch-ink-2">{{ row.ref_docname || "—" }}</span>
 				</template>
@@ -89,6 +89,22 @@
 			</div>
 		</template>
 	</Dialog>
+
+	<AdvanceQuickView :name="quickView" @close="quickView = null" @recover="recoverFromQuickView" />
+
+	<Dialog :open="!!deduction" title="Salary deduction" @update:open="(value: boolean) => !value && (deduction = null)">
+		<dl v-if="deduction" class="text-[13px]">
+			<div v-for="item in deductionFacts" :key="item.label" class="flex justify-between gap-3 py-1">
+				<dt class="shrink-0 text-ch-ink-3">{{ item.label }}</dt>
+				<dd class="truncate text-right text-ch-ink">{{ item.value || "—" }}</dd>
+			</div>
+		</dl>
+		<template #actions>
+			<div class="flex justify-end gap-2">
+				<Button icon-left="lucide-external-link" label="Open in Desk" @click="openDesk('additional-salary', deduction!.name)" />
+			</div>
+		</template>
+	</Dialog>
 </template>
 
 <script setup lang="ts">
@@ -99,7 +115,8 @@ import LinkField from "@/components/fields/LinkField.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { cycleLabel } from "@/data/payroll"
-import { getAdvances, recoverAdvance, recoverOverdueAdvances, useTabData, type Scope } from "@/data/payrollDashboard"
+import AdvanceQuickView from "../AdvanceQuickView.vue"
+import { getAdvances, recoverAdvance, recoverOverdueAdvances, useTabData, type AdvanceDetails, type Scope } from "@/data/payrollDashboard"
 import { can } from "@/data/permissions"
 import { formatCurrency, formatDateShort } from "@/utils/format"
 
@@ -139,6 +156,29 @@ const saving = ref(false)
 
 function openDesk(route: string, name: string) {
 	window.open(`/desk/${route}/${encodeURIComponent(name)}`, "_blank")
+}
+
+// Rows open on this page, as salary slips do; Desk is one click further
+const quickView = ref<string | null>(null)
+const deduction = ref<Record<string, any> | null>(null)
+
+/** A deduction made for an advance shows that advance; any other deduction shows its own details. */
+function openDeduction(row: Record<string, any>) {
+	if (row.ref_doctype === "Employee Advance" && row.ref_docname) quickView.value = row.ref_docname
+	else deduction.value = row
+}
+
+const deductionFacts = computed(() => [
+	{ label: "Employee", value: `${deduction.value!.employee_name} (${deduction.value!.employee})` },
+	{ label: "Component", value: deduction.value!.salary_component },
+	{ label: "Amount", value: formatCurrency(deduction.value!.amount, deduction.value!.currency) },
+	{ label: "Payroll date", value: formatDateShort(deduction.value!.payroll_date) },
+	{ label: "Record", value: deduction.value!.name },
+])
+
+function recoverFromQuickView(advance: AdvanceDetails) {
+	quickView.value = null
+	startRecovery({ ...advance, pending_amount: advance.outstanding_amount })
 }
 
 function startRecovery(row: Record<string, any>) {

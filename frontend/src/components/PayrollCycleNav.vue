@@ -8,20 +8,34 @@
 			<Select :model-value="periodValue" :options="periodOptions" size="sm" aria-label="Payroll month" placeholder="Custom range" @update:model-value="pickPeriod(String($event))" />
 		</div>
 		<Button icon="lucide-chevron-right" variant="ghost" aria-label="Next payroll period" :disabled="busy || !to || !canStep(1)" @click="step(1)" />
+		<span v-if="showRule" class="ml-1 flex items-center gap-1.5 rounded-full bg-ch-subtle px-3 py-1 text-[12px] text-ch-ink-3" :title="hint">
+			<LoadingIndicator v-if="loadingYears" class="size-3" />
+			<template v-else>
+				Pay cycle <b class="text-ch-ink">{{ rule }}</b>
+			</template>
+		</span>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { Button, Select } from "frappe-ui"
-import { cycleLabel, getPayrollCycle, getPayrollYears, type PayrollYear } from "@/data/payroll"
+import { Button, LoadingIndicator, Select } from "frappe-ui"
+import { clearPayrollCycles, cycleLabel, getPayrollCycle, getPayrollYears, type PayrollYear } from "@/data/payroll"
 import { addDays, today } from "@/utils/format"
 
-const props = defineProps<{ company: string | null | undefined; from?: string; to?: string; allowWholeYear?: boolean }>()
+const props = defineProps<{
+	company: string | null | undefined
+	from?: string
+	to?: string
+	allowWholeYear?: boolean
+	/** Say next to the pickers which pay cycle the company follows and where it is set. */
+	showRule?: boolean
+}>()
 const emit = defineEmits<{ "update:from": [v: string]; "update:to": [v: string] }>()
 
 const WHOLE_YEAR = "year"
 const busy = ref(false)
+const loadingYears = ref(false)
 const years = ref<PayrollYear[]>([])
 
 // The year that holds the range start; the month picker lists that year's payroll months
@@ -45,13 +59,22 @@ const yearHint = computed(() =>
 		? `${year.value.payroll_period || "Calendar year"} · ${cycleLabel(year.value.from_date, year.value.to_date)}`
 		: undefined
 )
-const hint = computed(() =>
-	year.value?.payroll_period
-		? `Months from Payroll Period ${year.value.payroll_period}`
-		: props.company
-			? `${props.company} has no Payroll Period here, so calendar months are shown`
-			: "Pick a company to follow its payroll period"
-)
+const ordinal = (day: number) => `${day}${["th", "st", "nd", "rd"][day % 10 > 3 || Math.floor((day % 100) / 10) === 1 ? 0 : day % 10]}`
+/** The pay cycle the chosen company follows, as the server gave it. It is the same for every year of a
+ * company with a cycle start day, so the newest year answers when the dates shown are outside the list. */
+const source = computed(() => year.value || years.value[0])
+const rule = computed(() => {
+	if (!props.company) return "calendar months"
+	const day = source.value?.start_day
+	if (day) return `${ordinal(day)} to ${ordinal(day - 1)}`
+	return source.value?.payroll_period ? `Payroll Period ${source.value.payroll_period}` : "calendar months"
+})
+const hint = computed(() => {
+	if (!props.company) return "Pick a company to follow its pay cycle"
+	if (source.value?.start_day) return `${props.company} starts its pay cycle on the ${ordinal(source.value.start_day)}. Change it in Payroll settings.`
+	if (source.value?.payroll_period) return `Months from Payroll Period ${source.value.payroll_period}`
+	return `${props.company} has no cycle start day or Payroll Period, so calendar months are shown. Set one in Payroll settings.`
+})
 
 function setRange(from: string, to: string) {
 	emit("update:from", from)
@@ -112,9 +135,13 @@ watch(
 	() => props.company,
 	async (company, old) => {
 		const keep = old === undefined && props.from && props.to
+		// Choosing a company asks the server for its pay cycle again, in case it was changed since
+		if (company && old !== undefined) clearPayrollCycles(company)
+		loadingYears.value = true
 		const list = await getPayrollYears(company)
 		if (company !== props.company) return
 		years.value = list
+		loadingYears.value = false
 		if (!keep) goTo(today())
 	},
 	{ immediate: true }

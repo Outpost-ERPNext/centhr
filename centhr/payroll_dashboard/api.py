@@ -131,3 +131,8 @@ def reconcile_master_sheet(from_date: str, to_date: str, company: str | None = N
 	if not upload:
 		frappe.throw(frappe._("Choose the master payroll sheet to upload."))
 	return reconcile.reconcile(Scope.make(from_date, to_date, company), upload.filename, upload.stream.read())
+
+
+@frappe.whitelist()
+def get_advance_details(name: str) -> dict:
+	return advances.get_advance_details(name)

@@ -66,12 +66,23 @@ class MasterSheet:
 		return columns
 
 	def parse(self, rows: list[list]) -> dict[str, dict]:
+		"""Rows by employee. A row without a net pay is one Finance has not filled in, such as an
+		untouched row of the template, so it is counted in `blank` and not compared."""
 		parsed = {}
+		self.blank = 0
 		for row in rows:
 			employee = str(self.cell(row, "employee") or "").strip()
 			if not employee:
 				continue
+			if self.number(row, "net_pay") is None:
+				self.blank += 1
+				continue
 			parsed[employee] = {key: self.number(row, key) for key in COMPARED if key in self.columns}
+		if not parsed:
+			frappe.throw(
+				_("No row of the sheet has a Net Pay amount, so there is nothing to compare."),
+				title=_("Sheet Not Filled In"),
+			)
 		return parsed
 
 	def cell(self, row: list, key: str):
@@ -106,6 +117,7 @@ def reconcile(scope: Scope, filename: str, content: bytes) -> dict:
 			for status in ("Matched", "Discrepancy", "Missing in Excel", "Missing in ERP")
 		},
 		"columns": sorted(sheet.columns),
+		"ignored": sheet.blank,
 	}
 
 
