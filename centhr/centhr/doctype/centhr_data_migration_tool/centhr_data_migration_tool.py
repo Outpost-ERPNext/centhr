@@ -16,6 +16,9 @@ from centhr.api.migrate.cost_center import CostCenterMigrator
 from centhr.api.migrate.employee import EmployeeMigrator
 from centhr.api.migrate.employee_advance import EmployeeAdvanceMigrator
 from centhr.api.migrate.expense_claim import ExpenseClaimMigrator
+from centhr.api.migrate.kpi_result import KpiResultMigrator
+from centhr.api.migrate.kpi_template import KpiTemplateMigrator
+from centhr.api.migrate.kpi_uom import KpiUomMigrator
 from centhr.api.migrate.leave_allocation import LeaveAllocationMigrator
 from centhr.api.migrate.leave_application import LeaveApplicationMigrator
 from centhr.api.migrate.leave_policy import LeavePolicyMigrator
@@ -23,6 +26,15 @@ from centhr.api.migrate.leave_policy_assignment import LeavePolicyAssignmentMigr
 from centhr.api.migrate.leave_type import LeaveTypeMigrator
 from centhr.api.migrate.payment_entry import PaymentEntryMigrator
 from centhr.api.migrate.payroll_entry import PayrollEntryMigrator
+from centhr.api.migrate.pms_360_degree import Pms360DegreeMigrator
+from centhr.api.migrate.pms_employee_relationship import PmsEmployeeRelationshipMigrator
+from centhr.api.migrate.pms_form_allocation import PmsFormAllocationMigrator
+from centhr.api.migrate.pms_question import PmsQuestionMigrator
+from centhr.api.migrate.pms_question_form import PmsQuestionFormMigrator
+from centhr.api.migrate.pms_question_trait import PmsQuestionTraitMigrator
+from centhr.api.migrate.pms_questionnaire import PmsQuestionnaireMigrator
+from centhr.api.migrate.pms_score_sheet import PmsScoreSheetMigrator
+from centhr.api.migrate.pms_settings import PmsSettingsMigrator
 from centhr.api.migrate.salary_component import SalaryComponentMigrator
 from centhr.api.migrate.salary_slip import SalarySlipMigrator
 from centhr.api.migrate.salary_structure import SalaryStructureMigrator
@@ -52,6 +64,19 @@ MIGRATORS = {
 	"employee_advance": EmployeeAdvanceMigrator,
 	"payment_entry": PaymentEntryMigrator,
 	"expense_claim": ExpenseClaimMigrator,
+	# PMS, in the order its records depend on each other
+	"kpi_uom": KpiUomMigrator,
+	"pms_question_trait": PmsQuestionTraitMigrator,
+	"pms_question": PmsQuestionMigrator,
+	"pms_settings": PmsSettingsMigrator,
+	"pms_employee_relationship": PmsEmployeeRelationshipMigrator,
+	"kpi_template": KpiTemplateMigrator,
+	"kpi_result": KpiResultMigrator,
+	"pms_360_degree": Pms360DegreeMigrator,
+	"pms_questionnaire": PmsQuestionnaireMigrator,
+	"pms_form_allocation": PmsFormAllocationMigrator,
+	"pms_question_form": PmsQuestionFormMigrator,
+	"pms_score_sheet": PmsScoreSheetMigrator,
 }
 
 

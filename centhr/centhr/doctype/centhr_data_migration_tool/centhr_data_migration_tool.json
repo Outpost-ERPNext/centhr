@@ -179,7 +179,102 @@
   "expense_claim_fetch",
   "expense_claim_records_section",
   "expense_claim_summary",
-  "expense_claim_table"
+  "expense_claim_table",
+  "kpi_uom_tab",
+  "kpi_uom_filters_section",
+  "kpi_uom_fetch",
+  "kpi_uom_records_section",
+  "kpi_uom_summary",
+  "kpi_uom_table",
+  "pms_question_trait_tab",
+  "pms_question_trait_filters_section",
+  "pms_question_trait_fetch",
+  "pms_question_trait_records_section",
+  "pms_question_trait_summary",
+  "pms_question_trait_table",
+  "pms_question_tab",
+  "pms_question_filters_section",
+  "pms_question_fetch",
+  "pms_question_records_section",
+  "pms_question_summary",
+  "pms_question_table",
+  "pms_settings_tab",
+  "pms_settings_filters_section",
+  "pms_settings_fetch",
+  "pms_settings_records_section",
+  "pms_settings_summary",
+  "pms_settings_table",
+  "pms_employee_relationship_tab",
+  "pms_employee_relationship_filters_section",
+  "pms_employee_relationship_employee",
+  "pms_employee_relationship_column_break_fetch",
+  "pms_employee_relationship_fetch",
+  "pms_employee_relationship_records_section",
+  "pms_employee_relationship_summary",
+  "pms_employee_relationship_table",
+  "kpi_template_tab",
+  "kpi_template_filters_section",
+  "kpi_template_fiscal_year",
+  "kpi_template_month",
+  "kpi_template_employee",
+  "kpi_template_column_break_fetch",
+  "kpi_template_fetch",
+  "kpi_template_records_section",
+  "kpi_template_summary",
+  "kpi_template_table",
+  "kpi_result_tab",
+  "kpi_result_filters_section",
+  "kpi_result_fiscal_year",
+  "kpi_result_month",
+  "kpi_result_employee",
+  "kpi_result_column_break_fetch",
+  "kpi_result_fetch",
+  "kpi_result_records_section",
+  "kpi_result_summary",
+  "kpi_result_table",
+  "pms_360_degree_tab",
+  "pms_360_degree_filters_section",
+  "pms_360_degree_fiscal_year",
+  "pms_360_degree_column_break_fetch",
+  "pms_360_degree_fetch",
+  "pms_360_degree_records_section",
+  "pms_360_degree_summary",
+  "pms_360_degree_table",
+  "pms_questionnaire_tab",
+  "pms_questionnaire_filters_section",
+  "pms_questionnaire_fiscal_year",
+  "pms_questionnaire_quarter",
+  "pms_questionnaire_employee",
+  "pms_questionnaire_column_break_fetch",
+  "pms_questionnaire_fetch",
+  "pms_questionnaire_records_section",
+  "pms_questionnaire_summary",
+  "pms_questionnaire_table",
+  "pms_form_allocation_tab",
+  "pms_form_allocation_filters_section",
+  "pms_form_allocation_fiscal_year",
+  "pms_form_allocation_quarter",
+  "pms_form_allocation_column_break_fetch",
+  "pms_form_allocation_fetch",
+  "pms_form_allocation_records_section",
+  "pms_form_allocation_summary",
+  "pms_form_allocation_table",
+  "pms_question_form_tab",
+  "pms_question_form_filters_section",
+  "pms_question_form_fiscal_year",
+  "pms_question_form_column_break_fetch",
+  "pms_question_form_fetch",
+  "pms_question_form_records_section",
+  "pms_question_form_summary",
+  "pms_question_form_table",
+  "pms_score_sheet_tab",
+  "pms_score_sheet_filters_section",
+  "pms_score_sheet_employee",
+  "pms_score_sheet_column_break_fetch",
+  "pms_score_sheet_fetch",
+  "pms_score_sheet_records_section",
+  "pms_score_sheet_summary",
+  "pms_score_sheet_table"
  ],
  "fields": [
   {
@@ -1060,13 +1155,495 @@
    "fieldname": "expense_claim_table",
    "fieldtype": "HTML",
    "label": "Records"
+  },
+  {
+   "fieldname": "kpi_uom_tab",
+   "fieldtype": "Tab Break",
+   "label": "KPI UOM"
+  },
+  {
+   "fieldname": "kpi_uom_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "kpi_uom_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "kpi_uom_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "kpi_uom_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "kpi_uom_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_trait_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Question Trait"
+  },
+  {
+   "fieldname": "pms_question_trait_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_question_trait_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_question_trait_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_trait_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_question_trait_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Question"
+  },
+  {
+   "fieldname": "pms_question_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_question_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_question_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_question_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Settings"
+  },
+  {
+   "fieldname": "pms_settings_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_settings_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_settings_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_settings_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_settings_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_employee_relationship_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Employee Relationship"
+  },
+  {
+   "fieldname": "pms_employee_relationship_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_employee_relationship_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "pms_employee_relationship_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_employee_relationship_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_employee_relationship_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_employee_relationship_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_employee_relationship_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "kpi_template_tab",
+   "fieldtype": "Tab Break",
+   "label": "KPI Template"
+  },
+  {
+   "fieldname": "kpi_template_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "kpi_template_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "kpi_template_month",
+   "fieldtype": "Select",
+   "label": "Month",
+   "options": "\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nSep\nOct\nNov\nDec"
+  },
+  {
+   "fieldname": "kpi_template_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "kpi_template_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "kpi_template_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "kpi_template_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "kpi_template_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "kpi_template_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "kpi_result_tab",
+   "fieldtype": "Tab Break",
+   "label": "KPI Result"
+  },
+  {
+   "fieldname": "kpi_result_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "kpi_result_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "kpi_result_month",
+   "fieldtype": "Select",
+   "label": "Month",
+   "options": "\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nSep\nOct\nNov\nDec"
+  },
+  {
+   "fieldname": "kpi_result_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "kpi_result_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "kpi_result_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "kpi_result_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "kpi_result_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "kpi_result_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_360_degree_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS 360 Degree"
+  },
+  {
+   "fieldname": "pms_360_degree_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_360_degree_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "pms_360_degree_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_360_degree_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_360_degree_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_360_degree_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_360_degree_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_questionnaire_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Questionnaire"
+  },
+  {
+   "fieldname": "pms_questionnaire_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_questionnaire_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "pms_questionnaire_quarter",
+   "fieldtype": "Select",
+   "label": "Quarter",
+   "options": "\nQ1\nQ2\nQ3\nQ4"
+  },
+  {
+   "fieldname": "pms_questionnaire_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "pms_questionnaire_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_questionnaire_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_questionnaire_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_questionnaire_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_questionnaire_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_form_allocation_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Form Allocation"
+  },
+  {
+   "fieldname": "pms_form_allocation_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_form_allocation_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "pms_form_allocation_quarter",
+   "fieldtype": "Select",
+   "label": "Quarter",
+   "options": "\nQ1\nQ2\nQ3\nQ4"
+  },
+  {
+   "fieldname": "pms_form_allocation_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_form_allocation_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_form_allocation_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_form_allocation_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_form_allocation_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_form_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Question Form"
+  },
+  {
+   "fieldname": "pms_question_form_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_question_form_fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "pms_question_form_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_question_form_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_question_form_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_question_form_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_question_form_table",
+   "fieldtype": "HTML",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_score_sheet_tab",
+   "fieldtype": "Tab Break",
+   "label": "PMS Score Sheet"
+  },
+  {
+   "fieldname": "pms_score_sheet_filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "pms_score_sheet_employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "pms_score_sheet_column_break_fetch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pms_score_sheet_fetch",
+   "fieldtype": "Button",
+   "label": "Fetch Details"
+  },
+  {
+   "fieldname": "pms_score_sheet_records_section",
+   "fieldtype": "Section Break",
+   "label": "Records"
+  },
+  {
+   "fieldname": "pms_score_sheet_summary",
+   "fieldtype": "HTML",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "pms_score_sheet_table",
+   "fieldtype": "HTML",
+   "label": "Records"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-14 02:48:12.829158",
+ "modified": "2026-11-17 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "Centhr Data Migration Tool",

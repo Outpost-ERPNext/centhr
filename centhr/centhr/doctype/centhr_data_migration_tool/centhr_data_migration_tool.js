@@ -235,6 +235,141 @@ centhr.migration.SECTIONS = {
 			["docstatus", __("Submitted"), "Check"],
 		],
 	},
+	// PMS, in the order its records depend on each other
+	kpi_uom: {
+		doctype: "KPI UOM",
+		label: __("KPI UOM"),
+		filters: [],
+		columns: [
+			["name1", __("UOM")],
+		],
+	},
+	pms_question_trait: {
+		doctype: "PMS Question Trait",
+		label: __("PMS Question Trait"),
+		filters: [],
+		columns: [
+			["question_trait", __("Question Trait")],
+		],
+	},
+	pms_question: {
+		doctype: "PMS Question",
+		label: __("PMS Question"),
+		filters: [],
+		columns: [
+			["question", __("Question")],
+			["department", __("Department")],
+			["designation", __("Designation")],
+			["is_a_general_question", __("General"), "Check"],
+		],
+	},
+	pms_settings: {
+		doctype: "PMS Settings",
+		label: __("PMS Settings"),
+		filters: [],
+		columns: [
+			["overall_kpi_weight", __("KPI Weight"), "Float"],
+			["overall__360_weight", __("360 Weight"), "Float"],
+		],
+	},
+	pms_employee_relationship: {
+		doctype: "PMS Employee Relationship",
+		label: __("PMS Employee Relationship"),
+		filters: ["employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["department", __("Department")],
+			["line_manager_name", __("Line Manager")],
+			["is_locked", __("Locked"), "Check"],
+		],
+	},
+	kpi_template: {
+		doctype: "KPI Template",
+		label: __("KPI Template"),
+		filters: ["fiscal_year", "month", "employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["fiscal_year", __("Fiscal Year")],
+			["month", __("Month")],
+			["department", __("Department")],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	kpi_result: {
+		doctype: "KPI Result",
+		label: __("KPI Result"),
+		filters: ["fiscal_year", "month", "employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["fiscal_year", __("Fiscal Year")],
+			["month", __("Month")],
+			["overall_score", __("Score"), "Float"],
+			["docstatus", __("Submitted"), "Check"],
+		],
+	},
+	pms_360_degree: {
+		doctype: "PMS 360 Degree",
+		label: __("PMS 360 Degree"),
+		filters: ["fiscal_year"],
+		columns: [
+			["fiscal_year", __("Fiscal Year")],
+			["quarter", __("Quarter")],
+			["month", __("Month")],
+		],
+	},
+	pms_questionnaire: {
+		doctype: "PMS Questionnaire",
+		label: __("PMS Questionnaire"),
+		filters: ["fiscal_year", "quarter", "employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["department", __("Department")],
+			["fiscal_year", __("Fiscal Year")],
+			["quarter", __("Quarter")],
+			["status", __("Status")],
+		],
+	},
+	pms_form_allocation: {
+		doctype: "PMS Form Allocation",
+		label: __("PMS Form Allocation"),
+		filters: ["fiscal_year", "quarter"],
+		columns: [
+			["reviewee_name", __("Reviewee")],
+			["reviewer_name", __("Reviewer")],
+			["relationship_type", __("Relationship")],
+			["fiscal_year", __("Fiscal Year")],
+			["quarter", __("Quarter")],
+		],
+	},
+	pms_question_form: {
+		doctype: "PMS Question Form",
+		label: __("PMS Question Form"),
+		filters: ["fiscal_year"],
+		columns: [
+			["reviewee_name", __("Reviewee")],
+			["reviewer_name", __("Reviewer")],
+			["relationship_type", __("Relationship")],
+			["fiscal_year", __("Fiscal Year")],
+			["average_rating", __("Average Rating"), "Float"],
+			["rating_score", __("Rating Score"), "Float"],
+		],
+	},
+	pms_score_sheet: {
+		doctype: "PMS Score Sheet",
+		label: __("PMS Score Sheet"),
+		filters: ["employee"],
+		columns: [
+			["employee", __("Employee")],
+			["employee_name", __("Employee Name")],
+			["calculated_score", __("Score"), "Float"],
+			["increment", __("Increment %"), "Float"],
+			["docstatus", __("Approved"), "Check"],
+		],
+	},
 };
 
 const form_events = {

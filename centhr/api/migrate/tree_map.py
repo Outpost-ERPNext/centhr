@@ -6,8 +6,8 @@ import frappe
 from centhr.api.migrate.client import TargetClient
 
 LOGGER = "CentHR API Logger"
-# Account and Cost Center names are made from this field, the number and the company abbreviation
-NAME_FIELDS = {"Account": "account_name", "Cost Center": "cost_center_name"}
+# Account, Cost Center and Department names are made from this field (and a number) and the company abbreviation
+NAME_FIELDS = {"Account": "account_name", "Cost Center": "cost_center_name", "Department": "department_name"}
 
 
 class TreeMap:
