@@ -47,6 +47,9 @@
 			min-width="900px"
 			@row-click="(row) => router.push(routeFor('Salary Slip', row.name)!)"
 		>
+			<template #cell-employee_name="{ row }">
+				<EmployeeCell :employee="row.employee" :name="row.employee_name" />
+			</template>
 			<template #cell-share="{ row }">
 				<div class="flex items-center gap-2">
 					<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-ch-subtle">
@@ -72,6 +75,7 @@ import DataTable, { type Column } from "@/components/DataTable.vue"
 import SegmentedTabs from "@/components/SegmentedTabs.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import EmployeeCell from "./EmployeeCell.vue"
 import { cycleLabel } from "@/data/payroll"
 import { getAnalytics, useTabData, type Scope } from "@/data/payrollDashboard"
 import { formatCurrency, formatNumber } from "@/utils/format"

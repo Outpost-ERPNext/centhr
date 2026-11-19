@@ -7,7 +7,7 @@ from centhr.api import attendance
 from centhr.api.employee import get_quick_view
 from centhr.api.payroll_run import PayrollGenerator, PayrollRun
 from centhr.customization.payroll import validate_line_manager
-from centhr.payroll_dashboard import analytics, audit, processing, reconcile, settings
+from centhr.payroll_dashboard import analytics, audit, master_sheet, processing, reconcile, settings
 from centhr.payroll_dashboard.scope import Scope
 from centhr.pms.testing import get_fiscal_year_2031, make_department, make_employee
 
@@ -60,7 +60,9 @@ class TestPayrollRun(IntegrationTestCase):
 		slip = self.slips_of(regular)[self.staff[0].name]
 		details = processing.get_slip_details(slip.name)
 		self.assertEqual(details["earnings"], [{"salary_component": COMPONENT, "amount": BASE}])
-		self.assertEqual(get_quick_view(self.staff[0].name, START, END)["salary_slip"]["name"], slip.name)
+		quick_view = get_quick_view(self.staff[0].name, START, END)
+		self.assertEqual(quick_view["salary_slip"]["name"], slip.name)
+		self.assertEqual(quick_view["payable_account"], self.payable)
 
 		# Before the slips are submitted nothing is booked
 		self.assertEqual(PayrollRun(regular).summary()["next_step"], "submit_slips")
@@ -92,6 +94,7 @@ class TestPayrollRun(IntegrationTestCase):
 				name=f"SLIP-{i}",
 				employee=e.name,
 				employee_name=e.employee_name,
+				department=e.department,
 				currency="NGN",
 				net_pay=BASE,
 				gross_pay=BASE,
@@ -101,25 +104,85 @@ class TestPayrollRun(IntegrationTestCase):
 			for i, e in enumerate(self.staff)
 		]
 		ann, ben, cal = (e.name for e in self.staff)
-		# Cal's row and the second ghost's are in the sheet but were never filled in
-		sheet = (
-			f'Staff ID,Net Pay,Payment Days\n{ann},"1,000.00",31\n{ben},950,31\nGHOST-1,500,31\n{cal},,\nGHOST-2,,\n'
-		).encode()
+		# The rollback after the tests does not take the uploaded file off the disk
+		self.addCleanup(master_sheet.remove, self.scope)
 
-		with patch.object(Scope, "get_slips", return_value=slips):
-			result = reconcile.reconcile(self.scope, "master.csv", sheet)
+		def reconciled(sheet: str) -> dict:
+			master_sheet.store(self.scope, "master.csv", sheet.encode())
+			with patch.object(Scope, "get_slips", return_value=slips):
+				return reconcile.reconcile(self.scope)
+
+		self.assertIsNone(reconcile.reconcile(self.scope)["sheet"])
+		# Cal's row and the second ghost's are in the sheet but were never filled in
+		result = reconciled(
+			f'Staff ID,Net Pay,Payment Days\n{ann},"1,000.00",31\n{ben},950,31\nGHOST-1,500,31\n{cal},,\nGHOST-2,,\n'
+		)
 
 		status = {row["employee"]: row["status"] for row in result["rows"]}
 		self.assertEqual(
 			status, {ann: "Matched", ben: "Discrepancy", cal: "Missing in Excel", "GHOST-1": "Missing in ERP"}
 		)
-		self.assertEqual(next(r for r in result["rows"] if r["employee"] == ben)["variance"], 50)
+		row = next(r for r in result["rows"] if r["employee"] == ben)
+		self.assertEqual((row["variance"], row["differences"]), (50, ["net_pay"]))
+		self.assertIn("950", row["remarks"][0])
 		self.assertEqual(result["ignored"], 2)
-		# A sheet with no net pay at all, such as an export of a cycle without slips, is refused
-		with self.assertRaisesRegex(frappe.ValidationError, "Net Pay"):
-			reconcile.reconcile(self.scope, "master.csv", f"Employee ID,Net Pay\n{ann},\n{ben},\n".encode())
+		self.assertEqual((result["summary"]["excel"], result["summary"]["slips"]), (3, 3))
+		self.assertEqual(result["sheet"]["file_name"], "master.csv")
+
+		# A new upload replaces the cycle's sheet. One with no net pay at all cannot be compared
+		result = reconciled(f"Employee ID,Net Pay\n{ann},\n{ben},\n")
+		self.assertIn("Net Pay", result["problem"])
+		self.assertEqual(result["rows"], [])
+		self.assertEqual(frappe.db.count(master_sheet.DOCTYPE, {"from_date": START}), 1)
 		with self.assertRaises(frappe.ValidationError):
-			reconcile.reconcile(self.scope, "master.csv", b"Name,Amount\nx,1\n")
+			master_sheet.store(self.scope, "master.txt", b"x")
+
+		master_sheet.remove(self.scope)
+		self.assertIsNone(reconcile.reconcile(self.scope)["sheet"])
+
+	def test_master_sheet_columns_are_mapped(self):
+		"""A sheet with its own headers is compared once HR maps them; the choice is the company's."""
+		ann = self.staff[0]
+		slip = frappe._dict(
+			name="SLIP-MAP",
+			employee=ann.name,
+			employee_name=ann.employee_name,
+			department=ann.department,
+			currency="NGN",
+			net_pay=BASE,
+			gross_pay=BASE,
+			total_deduction=0,
+			payment_days=31,
+		)
+		sheet = f"Code,Paid Out,{COMPONENT},Prorated\n{ann.name},₦ 990,400,600\n".encode()
+		master_sheet.store(self.scope, "master.csv", sheet)
+		self.addCleanup(master_sheet.remove, self.scope)
+
+		def reconciled() -> dict:
+			with (
+				patch.object(Scope, "get_slips", return_value=[slip]),
+				patch.object(reconcile.ComponentAmounts, "get", return_value=600.0),
+			):
+				return reconcile.reconcile(self.scope)
+
+		self.assertIn("Employee ID, Net Pay", reconciled()["problem"])
+
+		mapping = master_sheet.ColumnMapping(
+			self.company, master_sheet.read_stored(master_sheet.get_stored(self.scope)).headers
+		)
+		# The salary component is recognised by its name
+		self.assertEqual(mapping.auto[COMPONENT], COMPONENT)
+		with self.assertRaises(frappe.ValidationError):
+			mapping.save({"employee": "No Such Column"})
+		mapping.save({"employee": "Code", "net_pay": "Paid Out", COMPONENT: "Prorated"})
+
+		row = reconciled()["rows"][0]
+		self.assertEqual((row["status"], row["excel_net_pay"], row["variance"]), ("Discrepancy", 990, 10))
+		line = next(c for c in row["components"] if c["component"] == COMPONENT)
+		self.assertEqual((line["column"], line["excel"], line["differs"]), ("Prorated", 600, False))
+		# Only what differs from the recognised columns is kept
+		saved = frappe.parse_json(frappe.db.get_value("Company", self.company, master_sheet.MAPPING_FIELD))
+		self.assertEqual(saved, {"employee": "Code", "net_pay": "Paid Out", COMPONENT: "Prorated"})
 
 
 class TestPayrollSettings(IntegrationTestCase):

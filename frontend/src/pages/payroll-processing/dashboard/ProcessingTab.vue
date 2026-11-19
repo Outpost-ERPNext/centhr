@@ -34,12 +34,22 @@
 		<div class="flex flex-wrap items-center gap-2">
 			<h3 class="text-[14px] font-medium text-ch-ink">Salary slips</h3>
 			<SegmentedTabs v-model="status" :tabs="STATUSES.map((s) => ({ label: s, value: s, count: statusCounts[s] }))" />
+			<button
+				v-if="excelNote"
+				type="button"
+				class="rounded-full bg-ch-subtle px-3 py-1 text-[12px] text-ch-ink-2 hover:text-ch-ink"
+				title="Open the Excel reconciliation"
+				@click="reconcileOpen = true"
+			>
+				Excel · {{ excelNote }}
+			</button>
 		</div>
 	</div>
 
 	<FilterBar v-model:search="search" :total="filtered.length" :active="hasFilters" search-placeholder="Search name or ID" noun="salary slip" @clear="clear">
 		<FilterLink v-model="department" doctype="Department" placeholder="Department" :filters="scope.company ? { company: scope.company } : undefined" />
-		<Button icon-left="lucide-scale" label="Reconcile with Excel" :disabled="!data?.slips.length" @click="reconcileOpen = true" />
+		<FilterSelect v-if="reconciled?.rows?.length" v-model="excelStatus" :options="EXCEL_STATUSES" placeholder="Excel" />
+		<Button icon-left="lucide-scale" label="Reconcile with Excel" @click="reconcileOpen = true" />
 		<Button icon-left="lucide-file-spreadsheet" label="Export (Excel)" :disabled="!filtered.length" :loading="exporting" @click="exportRows" />
 	</FilterBar>
 
@@ -67,10 +77,7 @@
 		@clear-filters="clear"
 	>
 		<template #cell-employee="{ row }">
-			<div class="min-w-0">
-				<div class="truncate font-medium text-ch-ink">{{ row.employee_name }}</div>
-				<div class="truncate text-[12px] text-ch-ink-3">{{ row.employee }}{{ row.department ? ` · ${row.department}` : "" }}</div>
-			</div>
+			<EmployeeCell :employee="row.employee" :name="row.employee_name" :detail="[row.employee, row.department].filter(Boolean).join(' · ')" />
 		</template>
 		<template #cell-status="{ row }">
 			<StatusBadge pill doctype="Salary Slip" :status="row.status" />
@@ -97,7 +104,7 @@
 	<Pager v-model:page="page" v-model:page-size="pageSize" :total="filtered.length" />
 
 	<SalarySlipQuickView :name="quickView" @close="quickView = null" @action="quickAction" />
-	<ExcelReconcileDialog v-model:open="reconcileOpen" :scope="scope" @result="reconciled = $event" />
+	<ExcelReconcileDialog v-model:open="reconcileOpen" v-model:result="reconciled" :scope="scope" :loading="reconciling" />
 </template>
 
 <script setup lang="ts">
@@ -107,6 +114,7 @@ import CollapsibleSection from "@/components/CollapsibleSection.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import FilterBar from "@/components/FilterBar.vue"
 import FilterLink from "@/components/FilterLink.vue"
+import FilterSelect from "@/components/FilterSelect.vue"
 import Pager from "@/components/Pager.vue"
 import SegmentedTabs from "@/components/SegmentedTabs.vue"
 import StatCard from "@/components/StatCard.vue"
@@ -114,8 +122,10 @@ import StatusBadge from "@/components/StatusBadge.vue"
 import ExcelReconcileDialog from "../ExcelReconcileDialog.vue"
 import PayrollRunCard from "../PayrollRunCard.vue"
 import SalarySlipQuickView from "../SalarySlipQuickView.vue"
+import EmployeeCell from "./EmployeeCell.vue"
 import { cycleLabel } from "@/data/payroll"
-import { change, exportSlips, getProcessing, updateSlips, useTabData, type ReconcileResult, type Scope, type Totals } from "@/data/payrollDashboard"
+import { getReconciliation } from "@/data/masterSheet"
+import { change, exportSlips, getProcessing, updateSlips, useTabData, type Scope, type Totals } from "@/data/payrollDashboard"
 import { generatePayroll, type PayrollBatch } from "@/data/payrollRun"
 import { can } from "@/data/permissions"
 import type { SalaryRow } from "@/data/salaryOverview"
@@ -171,14 +181,20 @@ const generateOptions = computed(() => [
 // Opened from a row; the full slip is one click further
 const quickView = ref<string | null>(null)
 const reconcileOpen = ref(false)
-const reconciled = ref<ReconcileResult | null>(null)
+// The cycle's master sheet against its slips; the dialog replaces it after an upload or a new mapping
+const { data: reconciled, loading: reconciling, reload: reconcile } = useTabData(props.scope, getReconciliation)
 const EXCEL_TONES: Record<string, Tone> = { Matched: "green", Discrepancy: "red", "Missing in Excel": "amber" }
-/** Result of the last Excel reconciliation per employee, shown as a badge on their slip. */
+const EXCEL_STATUSES = Object.keys(EXCEL_TONES)
+const excelStatus = ref("")
+/** How each employee's slip compares with the master sheet, shown as a badge on the slip. */
 const excel = computed(() => Object.fromEntries((reconciled.value?.rows || []).map((r) => [r.employee, r.status])))
-watch(
-	() => [props.scope.company, props.scope.from, props.scope.to],
-	() => (reconciled.value = null)
-)
+// Without a compared sheet the Excel filter is hidden, so it must not go on filtering
+watch(reconciled, (value) => !value?.rows?.length && (excelStatus.value = ""))
+const excelNote = computed(() => {
+	const summary = reconciled.value?.rows?.length ? reconciled.value.summary : undefined
+	if (!summary) return ""
+	return `${summary.Matched} matched · ${summary.Discrepancy} discrepancies · ${summary["Missing in ERP"]} missing in ERP`
+})
 // Who a payroll run pays: active employees with a salary structure and no slip in the cycle yet
 const runsSummary = computed(() => {
 	const runs = data.value?.runs || []
@@ -195,10 +211,11 @@ const filtered = computed(() => {
 		.filter((s) => status.value === "All" || s.status === status.value)
 		.filter((s) => !term || s.employee.toLowerCase().includes(term) || s.employee_name.toLowerCase().includes(term))
 		.filter((s) => !department.value || s.department === department.value)
+		.filter((s) => !excelStatus.value || excel.value[s.employee] === excelStatus.value)
 })
 const pageRows = computed(() => filtered.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
-const hasFilters = computed(() => !!(search.value || department.value || status.value !== "All"))
-watch([status, search, department, pageSize], () => (page.value = 1))
+const hasFilters = computed(() => !!(search.value || department.value || excelStatus.value || status.value !== "All"))
+watch([status, search, department, excelStatus, pageSize], () => (page.value = 1))
 watch(data, () => (selected.value = []))
 
 // HRMS creates and submits large payrolls in a background job; follow it until it ends
@@ -211,12 +228,13 @@ onBeforeUnmount(() => clearTimeout(pollTimer))
 
 /** A step changes slips everywhere on the dashboard, so the other tabs reload too. */
 async function refresh() {
-	await reload()
+	// Changed slips compare differently with the master sheet
+	await Promise.all([reload(), reconcile()])
 	emit("changed")
 }
 
 function clear() {
-	search.value = department.value = ""
+	search.value = department.value = excelStatus.value = ""
 	status.value = "All"
 }
 
@@ -291,7 +309,7 @@ const amount = (label: string, key: string): Column => ({ key, label, width: "mi
 const columns = computed<Column[]>(() => [
 	{ key: "employee", label: "Employee", width: "minmax(200px,1.8fr)" },
 	{ key: "status", label: "Status", width: "100px" },
-	...(reconciled.value ? [{ key: "excel", label: "Excel", width: "140px" } as Column] : []),
+	...(reconciled.value?.rows?.length ? [{ key: "excel", label: "Excel", width: "140px" } as Column] : []),
 	days("Work days", "total_working_days"),
 	days("Absent", "absent_days"),
 	days("LWP", "leave_without_pay"),

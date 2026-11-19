@@ -45,14 +45,16 @@
 		</KeepAlive>
 	</div>
 
+	<EmployeeQuickView :employee="quickView" :from="state.from" :to="state.to" @close="quickView = null" />
 	<PayrollSettingsDialog v-if="state.company" v-model:open="settingsOpen" :company="state.company" @saved="onSettingsSaved" />
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, provide, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { Button } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
+import EmployeeQuickView from "@/components/EmployeeQuickView.vue"
 import FilterLink from "@/components/FilterLink.vue"
 import PayrollCycleNav from "@/components/PayrollCycleNav.vue"
 import AuditTab from "./dashboard/AuditTab.vue"
@@ -64,7 +66,7 @@ import AdvancesTab from "./dashboard/AdvancesTab.vue"
 import ReportsTab from "./dashboard/ReportsTab.vue"
 import ComplianceTab from "./dashboard/ComplianceTab.vue"
 import PayrollSettingsDialog from "./PayrollSettingsDialog.vue"
-import { TABS, type TabKey } from "@/data/payrollDashboard"
+import { OPEN_EMPLOYEE, TABS, type TabKey } from "@/data/payrollDashboard"
 import { useSalaryOverview } from "@/data/useSalaryOverview"
 import { formatDateShort } from "@/utils/format"
 
@@ -94,6 +96,10 @@ function refresh() {
 	refreshKey.value++
 	overview.load()
 }
+
+// The employee whose quick view is open; every tab opens it from an employee's name
+const quickView = ref<string | null>(null)
+provide(OPEN_EMPLOYEE, (employee) => (quickView.value = employee))
 
 const settingsOpen = ref(false)
 const cycleKey = ref(0)

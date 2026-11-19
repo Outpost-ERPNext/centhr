@@ -1,83 +1,106 @@
 <template>
-	<Dialog v-model:open="open" title="Reconcile with the master Excel sheet" size="4xl">
+	<Dialog v-model:open="open" title="Master payroll Excel reconciliation" size="6xl">
 		<div class="flex flex-col gap-4 text-[13px]">
-			<p class="text-ch-ink-3">
-				Upload Finance's payroll sheet for {{ cycleLabel(scope.from, scope.to) }} to compare it with the salary slips here. The first row
-				names the columns: Employee ID and Net Pay are needed; Payment Days, Gross Pay and Total Deduction are compared when present.
-				Rows without a net pay are skipped. Nothing is saved or changed.
-			</p>
 			<div class="flex flex-wrap items-center gap-2">
+				<p class="mr-auto max-w-xl text-ch-ink-3">
+					Finance's payroll sheet for {{ cycleLabel(scope.from, scope.to) }} against the salary slips here: net pay, gross pay, total
+					deduction and paid days.
+				</p>
 				<input ref="input" type="file" accept=".xlsx,.csv" class="hidden" @change="pick" />
-				<Button variant="solid" icon-left="lucide-upload" :label="result ? 'Upload another sheet' : 'Upload sheet'" :loading="busy" @click="input?.click()" />
-				<Button icon-left="lucide-download" label="Download template" @click="downloadMasterTemplate(scope)" />
-				<span v-if="fileName" class="truncate text-ch-ink-3">{{ fileName }}</span>
+				<Button icon-left="lucide-download" label="Template" @click="downloadMasterTemplate(scope)" />
+				<Button
+					v-if="sheet"
+					icon-left="lucide-columns-3"
+					label="Map columns"
+					:tooltip="scope.company ? undefined : 'Choose a company to map the columns of its sheet'"
+					:disabled="!scope.company"
+					@click="mappingOpen = true"
+				/>
+				<Button variant="solid" icon-left="lucide-upload" :label="sheet ? 'Replace Excel' : 'Upload Excel'" :loading="busy" @click="input?.click()" />
+				<Button v-if="sheet" theme="red" icon-left="lucide-trash-2" label="Remove" :disabled="busy" @click="confirmRemove" />
 			</div>
 			<p v-if="error" class="rounded-4 bg-ch-red-bg px-3 py-2 text-ch-red-ink" role="alert">{{ error }}</p>
 
-			<template v-if="result">
-				<p v-if="result.ignored" class="rounded-4 bg-ch-subtle px-3 py-2 text-ch-ink-2">
-					{{ result.ignored }} rows of the sheet have no net pay and were not compared.
-				</p>
-				<SegmentedTabs v-model="filter" :tabs="tabs" />
-				<div class="max-h-[46vh] overflow-auto rounded-4 border border-ch-line">
-					<table class="w-full min-w-[720px] text-left">
-						<thead class="sticky top-0 bg-ch-subtle text-ch-ink-3">
-							<tr>
-								<th class="px-3 py-2 font-normal">Employee</th>
-								<th class="px-3 py-2 text-right font-normal">Net pay here</th>
-								<th class="px-3 py-2 text-right font-normal">Net pay in Excel</th>
-								<th class="px-3 py-2 text-right font-normal">Difference</th>
-								<th class="px-3 py-2 text-right font-normal">Pay days here / Excel</th>
-								<th class="px-3 py-2 font-normal">Result</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="row in shown" :key="row.employee" class="border-t border-ch-line">
-								<td class="px-3 py-1.5">
-									<div class="font-medium text-ch-ink">{{ row.employee_name || row.employee }}</div>
-									<div v-if="row.employee_name" class="text-[12px] text-ch-ink-3">{{ row.employee }}</div>
-								</td>
-								<td class="px-3 py-1.5 text-right tabular-nums">{{ money(row.erp_net_pay, row) }}</td>
-								<td class="px-3 py-1.5 text-right tabular-nums">{{ money(row.excel_net_pay, row) }}</td>
-								<td class="px-3 py-1.5 text-right tabular-nums" :class="row.variance ? 'font-medium text-ch-red-ink' : 'text-ch-ink-3'">{{ money(row.variance, row) }}</td>
-								<td class="px-3 py-1.5 text-right tabular-nums text-ch-ink-2">{{ days(row.erp_payment_days) }} / {{ days(row.excel_payment_days) }}</td>
-								<td class="px-3 py-1.5"><StatusBadge pill :tone="RECONCILE_TONES[row.status]" :status="row.status" /></td>
-							</tr>
-							<tr v-if="!shown.length">
-								<td colspan="6" class="px-3 py-6 text-center text-ch-ink-3">Nothing in this group</td>
-							</tr>
-						</tbody>
-					</table>
+			<template v-if="sheet && result">
+				<div class="flex flex-wrap items-center gap-2 rounded-4 border border-ch-line px-3 py-2">
+					<span class="lucide-file-spreadsheet size-4 shrink-0 text-ch-ink-3" />
+					<span class="truncate font-medium text-ch-ink">{{ sheet.file_name }}</span>
+					<span class="text-ch-ink-3">{{ sheetNote }}</span>
+					<Button class="ml-auto" size="sm" icon-left="lucide-download" label="Download" :href="sheet.file_url" />
 				</div>
+
+				<div v-if="result.problem" class="flex flex-wrap items-center gap-2 rounded-4 bg-ch-amber-bg px-3 py-2 text-ch-amber-ink" role="alert">
+					<span class="lucide-triangle-alert size-4 shrink-0" />
+					<span class="flex-1">{{ result.problem }}</span>
+					<Button v-if="scope.company" size="sm" label="Map columns" @click="mappingOpen = true" />
+				</div>
+				<template v-else>
+					<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+						<StatCard v-for="tile in tiles" :key="tile.label" :label="tile.label" :value="formatNumber(tile.value)" :tone="tile.tone" />
+					</div>
+					<p v-if="result.ignored" class="rounded-4 bg-ch-subtle px-3 py-2 text-ch-ink-2">
+						{{ result.ignored }} rows of the sheet have no net pay and were not compared.
+					</p>
+					<ReconcileResultTable :scope="scope" :rows="result.rows || []" :summary="result.summary!" />
+				</template>
 			</template>
+			<div v-else-if="loading" class="flex justify-center py-10"><LoadingIndicator class="size-5 text-ch-ink-3" /></div>
+			<div v-else class="flex flex-col items-center gap-2 rounded-4 border border-dashed border-ch-line px-4 py-10 text-center">
+				<span class="lucide-file-spreadsheet size-6 text-ch-ink-4" />
+				<p class="font-medium text-ch-ink">No master sheet for this cycle yet</p>
+				<p class="max-w-md text-ch-ink-3">
+					Upload an .xlsx or .csv file. Its first row names the columns; Employee ID and Net Pay are needed. If its headers differ, map
+					them after the upload.
+				</p>
+			</div>
+
+			<p class="text-[12px] text-ch-ink-3">The master sheet is kept per pay cycle. Another company or cycle shows its own sheet.</p>
 		</div>
 	</Dialog>
+
+	<MasterSheetColumnsDialog v-if="sheet" v-model:open="mappingOpen" :scope="scope" @saved="result = $event" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { Button, Dialog } from "frappe-ui"
-import SegmentedTabs from "@/components/SegmentedTabs.vue"
-import StatusBadge from "@/components/StatusBadge.vue"
+import { Button, Dialog, LoadingIndicator, dialog, toast } from "frappe-ui"
+import StatCard from "@/components/StatCard.vue"
+import { downloadMasterTemplate, removeMasterSheet, uploadMasterSheet, type Reconciliation } from "@/data/masterSheet"
 import { cycleLabel } from "@/data/payroll"
-import { downloadMasterTemplate, reconcileMasterSheet, type ReconcileResult, type ReconcileRow, type ReconcileStatus, type Scope } from "@/data/payrollDashboard"
-import { formatCurrency, formatNumber } from "@/utils/format"
+import type { Scope } from "@/data/payrollDashboard"
+import { formatDateTime, formatNumber } from "@/utils/format"
 import type { Tone } from "@/utils/status"
+import MasterSheetColumnsDialog from "./MasterSheetColumnsDialog.vue"
+import ReconcileResultTable from "./ReconcileResultTable.vue"
 
-const RECONCILE_TONES: Record<ReconcileStatus, Tone> = { Matched: "green", Discrepancy: "red", "Missing in Excel": "amber", "Missing in ERP": "amber" }
-const STATUSES: ReconcileStatus[] = ["Discrepancy", "Missing in Excel", "Missing in ERP", "Matched"]
-
-/** Finance's master payroll sheet against the cycle's salary slips. The result also marks the slips in the grid. */
-const props = defineProps<{ scope: Scope }>()
-const emit = defineEmits<{ result: [result: ReconcileResult] }>()
+/** Finance's master payroll sheet of the cycle against its salary slips. The Processing tab loads the
+ * result, so it also marks the slips in its grid. */
+const props = defineProps<{ scope: Scope; loading?: boolean }>()
 const open = defineModel<boolean>("open", { default: false })
+const result = defineModel<Reconciliation | null>("result", { default: null })
 
 const input = ref<HTMLInputElement | null>(null)
-const result = ref<ReconcileResult | null>(null)
-const fileName = ref("")
-const filter = ref("All")
+const mappingOpen = ref(false)
 const busy = ref(false)
 const error = ref("")
+
+const sheet = computed(() => result.value?.sheet || null)
+const sheetNote = computed(() => {
+	const s = sheet.value!
+	const size = s.file_size ? `${(s.file_size / 1024).toFixed(1)} KB · ` : ""
+	return `${size}Uploaded ${formatDateTime(s.uploaded_on)} by ${s.uploaded_by}`
+})
+const tiles = computed<{ label: string; value: number; tone?: Tone }[]>(() => {
+	const summary = result.value!.summary!
+	return [
+		{ label: "Total in Excel", value: summary.excel },
+		{ label: "Total ERP slips", value: summary.slips },
+		{ label: "Matched", value: summary.Matched, tone: "green" },
+		{ label: "Discrepancies", value: summary.Discrepancy, tone: summary.Discrepancy ? "red" : undefined },
+		{ label: "Missing in ERP", value: summary["Missing in ERP"], tone: summary["Missing in ERP"] ? "amber" : undefined },
+		{ label: "Missing in Excel", value: summary["Missing in Excel"], tone: summary["Missing in Excel"] ? "amber" : undefined },
+	]
+})
 
 async function pick(event: Event) {
 	const target = event.target as HTMLInputElement
@@ -88,10 +111,7 @@ async function pick(event: Event) {
 	busy.value = true
 	error.value = ""
 	try {
-		result.value = await reconcileMasterSheet(props.scope, file)
-		fileName.value = file.name
-		filter.value = "All"
-		emit("result", result.value)
+		result.value = await uploadMasterSheet(props.scope, file)
 	} catch (e: any) {
 		error.value = e?.message || "Could not read the sheet"
 	} finally {
@@ -99,12 +119,17 @@ async function pick(event: Event) {
 	}
 }
 
-const tabs = computed(() => [
-	{ label: "All", value: "All", count: result.value?.rows.length || 0 },
-	...STATUSES.map((status) => ({ label: status, value: status, count: result.value?.summary[status] || 0 })),
-])
-const shown = computed(() => (result.value?.rows || []).filter((row) => filter.value === "All" || row.status === filter.value))
-
-const money = (value: number | null, row: ReconcileRow) => (value === null || value === undefined ? "—" : formatCurrency(value, row.currency))
-const days = (value: number | null) => (value === null || value === undefined ? "—" : formatNumber(value))
+function confirmRemove() {
+	dialog.confirm({
+		title: "Remove master sheet",
+		message: `Remove ${sheet.value!.file_name} from ${cycleLabel(props.scope.from, props.scope.to)}? The salary slips are not changed.`,
+		confirmLabel: "Remove",
+		theme: "red",
+		onConfirm: async () => {
+			await removeMasterSheet(props.scope)
+			result.value = { sheet: null }
+			toast.success("Master sheet removed")
+		},
+	})
+}
 </script>

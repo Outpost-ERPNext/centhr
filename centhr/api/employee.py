@@ -65,14 +65,34 @@ def get_quick_view(employee: str, from_date: str | None = None, to_date: str | N
 	cycle (the latest slip when no cycle is given). Salary parts are left out for users who cannot read them."""
 	doc = frappe.get_doc("Employee", employee)
 	doc.check_permission("read")
+	assignment = get_latest(
+		"Salary Structure Assignment",
+		employee,
+		["name", "salary_structure", "base", "currency", "from_date", "payroll_payable_account"],
+		"from_date",
+	)
 	return {
 		**{field: doc.get(field) for field in QUICK_VIEW_FIELDS},
-		"reports_to_name": frappe.db.get_value("Employee", doc.reports_to, "employee_name") if doc.reports_to else None,
-		"assignment": get_latest("Salary Structure Assignment", employee, ["name", "salary_structure", "base", "currency", "from_date"], "from_date"),
+		"reports_to_name": frappe.db.get_value("Employee", doc.reports_to, "employee_name")
+		if doc.reports_to
+		else None,
+		"assignment": assignment,
+		# Salaries are booked to the assignment's account, or else to the company's
+		"payable_account": (assignment or {}).get("payroll_payable_account")
+		or frappe.get_cached_value("Company", doc.company, "default_payroll_payable_account"),
 		"salary_slip": get_latest(
 			"Salary Slip",
 			employee,
-			["name", "status", "start_date", "end_date", "gross_pay", "total_deduction", "net_pay", "currency"],
+			[
+				"name",
+				"status",
+				"start_date",
+				"end_date",
+				"gross_pay",
+				"total_deduction",
+				"net_pay",
+				"currency",
+			],
 			"start_date",
 			{"start_date": ["<=", to_date], "end_date": [">=", from_date]} if from_date and to_date else {},
 			{"docstatus": ["!=", 2]},
@@ -80,7 +100,9 @@ def get_quick_view(employee: str, from_date: str | None = None, to_date: str | N
 	}
 
 
-def get_latest(doctype: str, employee: str, fields: list[str], date_field: str, *filters: dict) -> dict | None:
+def get_latest(
+	doctype: str, employee: str, fields: list[str], date_field: str, *filters: dict
+) -> dict | None:
 	"""The employee's newest record the user may read; submitted ones unless a filter says otherwise."""
 	if not frappe.has_permission(doctype, "read"):
 		return None

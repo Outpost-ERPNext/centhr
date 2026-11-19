@@ -20,6 +20,14 @@ CUSTOM_FIELDS = {
 			"insert_after": "payroll_cycle_start_day",
 			"description": "When payroll is generated, overdue employee advances are deducted from the salary of that cycle.",
 		},
+		{
+			"fieldname": "payroll_master_sheet_columns",
+			"fieldtype": "JSON",
+			"label": "Payroll Master Sheet Columns",
+			"insert_after": "auto_recover_advances",
+			"hidden": 1,
+			"description": "Set by Map Columns of the Payroll Dashboard: which column of Finance's master payroll sheet is what.",
+		},
 	],
 	"Payroll Entry": [
 		{

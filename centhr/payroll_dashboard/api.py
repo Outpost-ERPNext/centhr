@@ -8,6 +8,7 @@ from centhr.payroll_dashboard import (
 	analytics,
 	audit,
 	compliance,
+	master_sheet,
 	processing,
 	reconcile,
 	reports,
@@ -39,7 +40,18 @@ def get_attendance(from_date: str, to_date: str, company: str | None = None) -> 
 	rows = [frappe._dict(r) for r in SalaryOverview(company, scope.from_date, scope.to_date).get_rows()]
 	summary = AttendanceSummary(scope).summarize(rows)
 	return [
-		{key: row.get(key) for key in ("name", "employee_name", "company", "department", "designation", "salary_slip", "slip_status")}
+		{
+			key: row.get(key)
+			for key in (
+				"name",
+				"employee_name",
+				"company",
+				"department",
+				"designation",
+				"salary_slip",
+				"slip_status",
+			)
+		}
 		| summary[row.name]
 		for row in rows
 	]
@@ -119,18 +131,64 @@ def get_salary_slip_details(name: str) -> dict:
 def download_master_sheet_template(from_date: str, to_date: str, company: str | None = None):
 	"""The Excel sheet Finance fills in for the reconciliation, with the cycle's employees listed."""
 	frappe.has_permission("Salary Slip", "read", throw=True)
-	reconcile.download_template(Scope.make(from_date, to_date, company))
+	master_sheet.download_template(Scope.make(from_date, to_date, company))
+
+
+@frappe.whitelist()
+def get_master_sheet_reconciliation(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""How the cycle's master payroll sheet compares with its salary slips."""
+	frappe.has_permission("Salary Slip", "read", throw=True)
+	return reconcile.reconcile(Scope.make(from_date, to_date, company))
 
 
 @frappe.whitelist(methods=["POST"])
-def reconcile_master_sheet(from_date: str, to_date: str, company: str | None = None) -> dict:
-	"""Compare the uploaded master payroll sheet (the request's `file`) with the cycle's salary slips.
-	Nothing is saved: the result goes back to the page."""
+def upload_master_sheet(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""Keep the uploaded master payroll sheet (the request's `file`) for the cycle, in place of the one
+	it had, and compare it with the cycle's salary slips."""
 	frappe.has_permission("Salary Slip", "read", throw=True)
 	upload = frappe.request.files.get("file")
 	if not upload:
 		frappe.throw(frappe._("Choose the master payroll sheet to upload."))
-	return reconcile.reconcile(Scope.make(from_date, to_date, company), upload.filename, upload.stream.read())
+	scope = Scope.make(from_date, to_date, company)
+	master_sheet.store(scope, upload.filename, upload.stream.read())
+	return reconcile.reconcile(scope)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_master_sheet(from_date: str, to_date: str, company: str | None = None) -> None:
+	frappe.has_permission(master_sheet.DOCTYPE, "delete", throw=True)
+	master_sheet.remove(Scope.make(from_date, to_date, company))
+
+
+@frappe.whitelist()
+def export_master_sheet_reconciliation(
+	from_date: str, to_date: str, company: str | None = None, status: str | None = None
+):
+	"""The reconciled rows as an Excel file: all of them, or those of one status."""
+	frappe.has_permission("Salary Slip", "read", throw=True)
+	reconcile.export(Scope.make(from_date, to_date, company), status)
+
+
+@frappe.whitelist()
+def get_master_sheet_columns(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""For Map Columns: the sheet's headers and which of them holds each thing CentHR compares."""
+	frappe.has_permission("Salary Slip", "read", throw=True)
+	return get_column_mapping(Scope.make(from_date, to_date, company)).as_dict()
+
+
+@frappe.whitelist(methods=["POST"])
+def save_master_sheet_columns(from_date: str, to_date: str, company: str, mapping: dict | str) -> dict:
+	"""Save the company's column mapping and compare the cycle's sheet again with it."""
+	scope = Scope.make(from_date, to_date, company)
+	get_column_mapping(scope).save(frappe.parse_json(mapping) if isinstance(mapping, str) else mapping)
+	return reconcile.reconcile(scope)
+
+
+def get_column_mapping(scope: Scope) -> master_sheet.ColumnMapping:
+	stored = master_sheet.get_stored(scope)
+	if not stored:
+		frappe.throw(frappe._("Upload the master sheet of this cycle first."))
+	return master_sheet.ColumnMapping(scope.company, master_sheet.read_stored(stored).headers)
 
 
 @frappe.whitelist()

@@ -40,7 +40,7 @@
 			mobile-aside="slip_status"
 			min-width="1080px"
 			@sort="overview.toggleSort"
-			@row-click="(row) => router.push(employeeRoute(row.name))"
+			@row-click="(row) => (quickView = row.name)"
 			@clear-filters="overview.clearFilters"
 		>
 			<template #cell-name="{ row }">
@@ -82,7 +82,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { useRouter } from "vue-router"
 import { Button } from "frappe-ui"
 import CollapsibleSection from "@/components/CollapsibleSection.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
@@ -104,7 +103,6 @@ import { routeFor } from "@/utils/routes"
 const props = defineProps<{ overview: SalaryOverview; columns: Column[]; audit?: boolean; hideScope?: boolean }>()
 defineSlots<{ toolbar?: () => any; actions?: (props: { row: Record<string, any> }) => any }>()
 
-const router = useRouter()
 // Top-level bindings, so the template reads them without .value
 const { state, rows, loading, error, tileCounts, viewCounts, filtered, pageRows, hasFilters } = props.overview
 

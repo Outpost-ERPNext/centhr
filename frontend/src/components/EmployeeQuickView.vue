@@ -11,9 +11,17 @@
 				<StatusBadge pill doctype="Employee" :status="data.status" />
 			</div>
 
+			<div class="grid grid-cols-2 gap-3">
+				<StatCard label="Monthly base salary" :value="baseSalary" :tone="data.assignment ? 'green' : undefined" />
+				<StatCard :label="from ? 'Cycle payroll status' : 'Latest payroll status'" :value="payrollStatus" :tone="payrollTone" />
+			</div>
+
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				<section v-for="group in groups" :key="group.title" class="rounded-4 border border-ch-line">
-					<h3 class="border-b border-ch-line px-3 py-2 font-medium text-ch-ink">{{ group.title }}</h3>
+					<h3 class="flex items-center justify-between gap-2 border-b border-ch-line px-3 py-2 font-medium text-ch-ink">
+						{{ group.title }}
+						<StatusBadge v-if="group.badge" pill tone="red" :status="group.badge" />
+					</h3>
 					<dl class="px-3 py-1">
 						<div v-for="item in group.items" :key="item.label" class="flex justify-between gap-3 py-1">
 							<dt class="shrink-0 text-ch-ink-3">{{ item.label }}</dt>
@@ -26,9 +34,16 @@
 		<div v-else class="flex justify-center py-10"><LoadingIndicator class="size-5 text-ch-ink-3" /></div>
 
 		<template #actions>
-			<div class="flex flex-wrap justify-end gap-2">
-				<Button v-if="data?.salary_slip" icon-left="lucide-receipt" label="Salary slip" :route="routeFor('Salary Slip', data.salary_slip.name)!" />
-				<Button v-if="data" variant="solid" icon-left="lucide-user" label="Open profile" :route="routeFor('Employee', data.name)!" />
+			<div v-if="data" class="flex flex-wrap justify-end gap-2">
+				<Button v-if="data.salary_slip" icon-left="lucide-receipt" label="Salary slip" :route="routeFor('Salary Slip', data.salary_slip.name)!" />
+				<Button :variant="canAssign ? 'subtle' : 'solid'" icon-left="lucide-user" label="Employee master" :route="routeFor('Employee', data.name)!" />
+				<Button
+					v-if="canAssign"
+					variant="solid"
+					icon-left="lucide-plus"
+					label="Assign structure"
+					:route="{ name: 'SalaryStructureAssignmentNew', query: { company: data.company, employee: data.name } }"
+				/>
 			</div>
 		</template>
 	</Dialog>
@@ -37,13 +52,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { Avatar, Button, Dialog, LoadingIndicator } from "frappe-ui"
+import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { api } from "@/data/api"
+import { can } from "@/data/permissions"
 import { formatCurrency, formatDateShort } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
+import { toneFor } from "@/utils/status"
 
-/** An employee at a glance, without leaving the list: employment, salary structure, bank details and
- * the salary slip of the pay cycle (the latest slip when no cycle is given). */
+/** An employee at a glance, without leaving the list: base salary, payroll status, salary structure,
+ * bank details, employment and the salary slip of the pay cycle (the latest slip when no cycle is given). */
 const props = defineProps<{ employee: string | null; from?: string; to?: string }>()
 defineEmits<{ close: [] }>()
 
@@ -62,14 +80,48 @@ watch(
 	{ immediate: true }
 )
 
-const groups = computed(() => {
+const money = (value: number, currency?: string) => formatCurrency(value, currency)
+
+const baseSalary = computed(() => {
+	const assignment = data.value!.assignment
+	return assignment ? money(assignment.base, assignment.currency) : "—"
+})
+const payrollStatus = computed(() => data.value!.salary_slip?.status || "Pending")
+const payrollTone = computed(() => (data.value!.salary_slip ? toneFor("Salary Slip", payrollStatus.value) : "amber"))
+const canAssign = computed(
+	() => !data.value!.assignment && data.value!.status === "Active" && can("Salary Structure Assignment").create
+)
+
+interface Group {
+	title: string
+	badge?: string
+	items: { label: string; value?: string | null; warn?: boolean }[]
+}
+
+const groups = computed<Group[]>(() => {
 	const d = data.value!
 	const assignment = d.assignment
 	const slip = d.salary_slip
-	const money = (value: number, currency?: string) => formatCurrency(value, currency)
 	return [
 		{
-			title: "Employment",
+			title: "Salary structure",
+			badge: assignment ? undefined : "Missing assignment",
+			items: [
+				{ label: "Structure name", value: assignment?.salary_structure || "None" },
+				{ label: "Effective date", value: assignment && formatDateShort(assignment.from_date) },
+			],
+		},
+		{
+			title: "Banking & payment details",
+			items: [
+				{ label: "Bank name", value: d.bank_name || "Not configured", warn: !d.bank_name },
+				{ label: "Account number", value: d.bank_ac_no },
+				{ label: "Payment mode", value: d.salary_mode },
+				{ label: "Payable account", value: d.payable_account },
+			],
+		},
+		{
+			title: "Employment details",
 			items: [
 				{ label: "Joined", value: d.date_of_joining && formatDateShort(d.date_of_joining) },
 				...(d.relieving_date ? [{ label: "Relieved", value: formatDateShort(d.relieving_date) }] : []),
@@ -80,28 +132,9 @@ const groups = computed(() => {
 			],
 		},
 		{
-			title: "Contact",
-			items: [
-				{ label: "Work email", value: d.company_email },
-				{ label: "Personal email", value: d.personal_email },
-				{ label: "Mobile", value: d.cell_number },
-			],
-		},
-		{
-			title: "Salary structure",
-			items: assignment
-				? [
-						{ label: "Structure", value: assignment.salary_structure },
-						{ label: "Base salary", value: money(assignment.base, assignment.currency) },
-						{ label: "Since", value: formatDateShort(assignment.from_date) },
-					]
-				: [{ label: "Structure", value: assignment === null ? "Missing assignment" : "—", warn: true }],
-		},
-		{
 			title: props.from ? "Salary slip of this cycle" : "Latest salary slip",
 			items: slip
 				? [
-						{ label: "Status", value: slip.status },
 						{ label: "Period", value: `${formatDateShort(slip.start_date)} → ${formatDateShort(slip.end_date)}` },
 						{ label: "Gross pay", value: money(slip.gross_pay, slip.currency) },
 						{ label: "Deductions", value: money(slip.total_deduction, slip.currency) },
@@ -110,11 +143,11 @@ const groups = computed(() => {
 				: [{ label: "Status", value: "No salary slip" }],
 		},
 		{
-			title: "Bank details",
+			title: "Contact",
 			items: [
-				{ label: "Paid by", value: d.salary_mode },
-				{ label: "Bank", value: d.bank_name },
-				{ label: "Account", value: d.bank_ac_no },
+				{ label: "Work email", value: d.company_email },
+				{ label: "Personal email", value: d.personal_email },
+				{ label: "Mobile", value: d.cell_number },
 			],
 		},
 	]

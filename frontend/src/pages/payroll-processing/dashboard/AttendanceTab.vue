@@ -38,10 +38,7 @@
 		@clear-filters="clear"
 	>
 		<template #cell-name="{ row }">
-			<div class="min-w-0">
-				<div class="truncate font-medium text-ch-ink">{{ row.employee_name }}</div>
-				<div class="truncate text-[12px] text-ch-ink-3">{{ row.name }}{{ row.department ? ` · ${row.department}` : "" }}</div>
-			</div>
+			<EmployeeCell :employee="row.name" :name="row.employee_name" :detail="[row.name, row.department].filter(Boolean).join(' · ')" />
 		</template>
 		<template #cell-absent="{ row }">
 			<span :class="row.absent ? 'font-medium text-ch-red-ink' : 'text-ch-ink-3'">{{ formatNumber(row.absent) }}</span>
@@ -72,6 +69,7 @@ import FilterLink from "@/components/FilterLink.vue"
 import Pager from "@/components/Pager.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import EmployeeCell from "./EmployeeCell.vue"
 import { getAttendance, useTabData, type Scope } from "@/data/payrollDashboard"
 import { formatNumber } from "@/utils/format"
 import type { Tone } from "@/utils/status"

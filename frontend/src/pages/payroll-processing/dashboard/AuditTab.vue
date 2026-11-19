@@ -38,7 +38,7 @@
 		:empty-message="check === 'status' ? 'No employees match these filters' : 'No employee fails this check'"
 		mobile-aside="payroll"
 		min-width="1080px"
-		@row-click="(row) => router.push(routeFor('Employee', row.name)!)"
+		@row-click="(row) => openEmployee(row.name)"
 		@clear-filters="clear"
 	>
 		<template #cell-name="{ row }">
@@ -102,8 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
-import { useRouter } from "vue-router"
+import { computed, inject, ref, watch } from "vue"
 import { Button, Dialog, toast } from "frappe-ui"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import FilterBar from "@/components/FilterBar.vue"
@@ -113,12 +112,11 @@ import SegmentedTabs from "@/components/SegmentedTabs.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { cycleLabel } from "@/data/payroll"
-import { getAudit, releaseHold, setHold, useTabData, type AuditRow, type Scope } from "@/data/payrollDashboard"
+import { OPEN_EMPLOYEE, getAudit, releaseHold, setHold, useTabData, type AuditRow, type Scope } from "@/data/payrollDashboard"
 import type { Tone } from "@/utils/status"
-import { routeFor } from "@/utils/routes"
 
 const props = defineProps<{ scope: Scope }>()
-const router = useRouter()
+const openEmployee = inject(OPEN_EMPLOYEE)!
 const { data, loading, error, reload } = useTabData(props.scope, getAudit)
 
 const ISSUE_LABELS: Record<string, string> = {

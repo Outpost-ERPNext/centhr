@@ -1,9 +1,9 @@
-import { ref, watch, type Ref } from "vue"
-import { api, downloadFile, serverMessage } from "@/data/api"
+import { ref, watch, type InjectionKey, type Ref } from "vue"
+import { api, downloadFile } from "@/data/api"
 import type { PayrollRun } from "@/data/payrollRun"
 import type { SalaryRow } from "@/data/salaryOverview"
 
-const METHOD = "centhr.payroll_dashboard.api"
+export const METHOD = "centhr.payroll_dashboard.api"
 
 /** The company (empty for all) and pay cycle every tab works on. */
 export interface Scope {
@@ -11,6 +11,9 @@ export interface Scope {
 	from: string
 	to: string
 }
+
+/** Opens an employee's quick view; the dashboard provides it to its tabs. */
+export const OPEN_EMPLOYEE: InjectionKey<(employee: string) => void> = Symbol("openEmployee")
 
 export const TABS = [
 	{ key: "audit", label: "Pre-Check Audit" },
@@ -88,7 +91,7 @@ export interface Obligation {
 	open_requests: string[]
 }
 
-const args = (scope: Scope) => ({ company: scope.company || undefined, from_date: scope.from, to_date: scope.to })
+export const args = (scope: Scope) => ({ company: scope.company || undefined, from_date: scope.from, to_date: scope.to })
 
 export const getAudit = (scope: Scope) => api<{ cards: AuditCard[]; rows: AuditRow[] }>(`${METHOD}.get_audit`, args(scope))
 export const setHold = (employee: string, scope: Scope, reason: string) =>
@@ -142,48 +145,6 @@ export interface SlipDetails extends Slip {
 	deductions: { salary_component: string; amount: number }[]
 }
 export const getSlipDetails = (name: string) => api<SlipDetails>(`${METHOD}.get_salary_slip_details`, { name })
-
-// Excel reconciliation
-
-export type ReconcileStatus = "Matched" | "Discrepancy" | "Missing in Excel" | "Missing in ERP"
-export interface ReconcileRow {
-	employee: string
-	employee_name: string | null
-	salary_slip: string | null
-	currency: string | null
-	status: ReconcileStatus
-	differences?: string[]
-	variance: number | null
-	erp_net_pay: number | null
-	excel_net_pay: number | null
-	erp_payment_days: number | null
-	excel_payment_days: number | null
-}
-export interface ReconcileResult {
-	rows: ReconcileRow[]
-	summary: Record<ReconcileStatus, number>
-	columns: string[]
-	/** Rows of the sheet that have no net pay, so were not compared. */
-	ignored: number
-}
-
-/** Uploads Finance's master sheet and returns how it compares with the cycle's salary slips. Nothing is saved. */
-export async function reconcileMasterSheet(scope: Scope, file: File): Promise<ReconcileResult> {
-	const form = new FormData()
-	form.append("file", file, file.name)
-	form.append("from_date", scope.from)
-	form.append("to_date", scope.to)
-	if (scope.company) form.append("company", scope.company)
-	const response = await fetch(`/api/method/${METHOD}.reconcile_master_sheet`, {
-		method: "POST",
-		body: form,
-		headers: { "X-Frappe-CSRF-Token": window.csrf_token || "", Accept: "application/json" },
-	})
-	const body = await response.json().catch(() => ({}))
-	if (!response.ok) throw new Error(serverMessage(body) || "Could not read the sheet")
-	return body.message
-}
-export const downloadMasterTemplate = (scope: Scope) => downloadFile(`${METHOD}.download_master_sheet_template`, args(scope))
 
 /** The cycle's salary slips as an Excel file, in the shared overview export. */
 export const exportSlips = (scope: Scope, employees: string[]) =>

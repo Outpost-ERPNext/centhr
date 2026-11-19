@@ -40,10 +40,7 @@
 			</header>
 			<DataTable :columns="advanceColumns" :rows="advances" :loading="loading" :error="error" empty-icon="lucide-hand-coins" empty-message="No unrecovered advances" min-width="1000px" @row-click="(row) => (quickView = row.name)">
 				<template #cell-employee_name="{ row }">
-					<div class="min-w-0">
-						<div class="truncate font-medium text-ch-ink">{{ row.employee_name }}</div>
-						<div class="truncate text-[12px] text-ch-ink-3">{{ row.employee }} · {{ row.name }}</div>
-					</div>
+					<EmployeeCell :employee="row.employee" :name="row.employee_name" :detail="`${row.employee} · ${row.name}`" />
 				</template>
 				<template #cell-state="{ row }">
 					<StatusBadge pill :tone="row.recovery_scheduled ? 'blue' : row.overdue ? 'amber' : 'gray'" :status="row.recovery_scheduled ? 'Recovery scheduled' : row.overdue ? 'Due this cycle' : 'Upcoming'" />
@@ -67,6 +64,9 @@
 				<span class="text-[12.5px] text-ch-ink-3">Additional Salary deductions dated in the cycle</span>
 			</header>
 			<DataTable :columns="deductionColumns" :rows="deductions" :loading="loading" empty-icon="lucide-minus-circle" empty-message="No deductions in this cycle" min-width="760px" @row-click="openDeduction">
+				<template #cell-employee_name="{ row }">
+					<EmployeeCell :employee="row.employee" :name="row.employee_name" />
+				</template>
 				<template #cell-ref_docname="{ row }">
 					<span class="text-ch-ink-2">{{ row.ref_docname || "—" }}</span>
 				</template>
@@ -116,6 +116,7 @@ import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { cycleLabel } from "@/data/payroll"
 import AdvanceQuickView from "../AdvanceQuickView.vue"
+import EmployeeCell from "./EmployeeCell.vue"
 import { getAdvances, recoverAdvance, recoverOverdueAdvances, useTabData, type AdvanceDetails, type Scope } from "@/data/payrollDashboard"
 import { can } from "@/data/permissions"
 import { formatCurrency, formatDateShort } from "@/utils/format"
