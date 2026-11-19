@@ -177,24 +177,19 @@ const groups: { label: string; items: NavItem[] }[] = [
 		],
 	},
 	{
-		label: "Payroll",
+		label: "Payroll & Finance",
 		items: [
+			{ label: "Payroll Dashboard", icon: "lucide-layout-dashboard", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
+			{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
 			{
-				label: "Payroll Processing",
-				icon: "lucide-banknote",
-				children: [
-					{ label: "Payroll Dashboard", icon: "lucide-layout-dashboard", route: "/payroll-processing/payroll-entries", doctype: "Payroll Entry" },
-					{ label: "Salary Slip", icon: "lucide-receipt", route: "/payroll-processing/salary-slips", doctype: "Salary Slip" },
-				],
+				label: "Salary Structure Assignment",
+				icon: "lucide-user-check",
+				route: "/salary-structure-assignments",
+				doctype: "Salary Structure Assignment",
 			},
-		],
-	},
-	{
-		label: "IOU",
-		items: [
 			{
-				label: "IOU Dashboard",
-				icon: "lucide-layout-dashboard",
+				label: "IOU",
+				icon: "lucide-hand-coins",
 				route: "/iou/dashboard",
 				doctypes: ["IOU and Loans", "Employee Advance", "Expense Claim"],
 			},

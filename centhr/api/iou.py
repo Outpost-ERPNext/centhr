@@ -8,6 +8,7 @@ Integrates the legacy IOU and Loans DocType with Employee Advance (IOU applicati
 - IOU Application
 - IOU Claim Settlement – No Linked IOU
 - IOU Claim Settlement – Linked IOU
+- Salary Advance (an Employee Advance whose Purpose Type is Salary Advance)
 
 The approve, reject, modify and pay actions run the SOP rules in centhr.iou.
 """
@@ -41,9 +42,15 @@ ADVANCE_CLOSED_STATUSES = {"Claimed", "Returned", "Partly Claimed and Returned",
 CATEGORY_APPLICATION = "IOU Application"
 CATEGORY_SETTLEMENT_NO_LINK = "IOU Claim Settlement – No Linked IOU"
 CATEGORY_SETTLEMENT_LINKED = "IOU Claim Settlement – Linked IOU"
+CATEGORY_SALARY_ADVANCE = "Salary Advance"
 
-# Each record's advance type is its category; the filter always offers all three
-ADVANCE_TYPES = (CATEGORY_APPLICATION, CATEGORY_SETTLEMENT_LINKED, CATEGORY_SETTLEMENT_NO_LINK)
+# Each record's advance type is its category; the filter always offers all of them
+ADVANCE_TYPES = (
+	CATEGORY_APPLICATION,
+	CATEGORY_SETTLEMENT_LINKED,
+	CATEGORY_SETTLEMENT_NO_LINK,
+	CATEGORY_SALARY_ADVANCE,
+)
 
 APPROVED = "Approved"
 PENDING = "Pending"
@@ -457,12 +464,13 @@ def _normalize_employee_advance(
 	if row.get("docstatus") == 0 and workflow_state:
 		status = workflow_state
 	is_closed = status in ADVANCE_CLOSED_STATUSES or status == STATE_REJECTED
+	category = CATEGORY_SALARY_ADVANCE if row.get("purpose_type") == CATEGORY_SALARY_ADVANCE else CATEGORY_APPLICATION
 
 	return {
 		"doctype": ADVANCE_DOCTYPE,
 		"name": row["name"],
-		"category": CATEGORY_APPLICATION,
-		"advance_type": CATEGORY_APPLICATION,
+		"category": category,
+		"advance_type": category,
 		"employee": row.get("employee"),
 		"employee_name": row.get("employee_name") or row.get("employee"),
 		"department": row.get("department"),
@@ -679,11 +687,12 @@ def _date_str(value) -> str | None:
 
 
 def _compute_stats(rows: list[dict]) -> dict:
-	"""Computes count and total amount for the three categories, overall, and the top cards."""
+	"""Computes count and total amount for each category, overall, and the top cards."""
 	keys = {
 		CATEGORY_APPLICATION: "iou_application",
 		CATEGORY_SETTLEMENT_NO_LINK: "settlement_no_link",
 		CATEGORY_SETTLEMENT_LINKED: "settlement_linked",
+		CATEGORY_SALARY_ADVANCE: "salary_advance",
 	}
 	stats = {
 		key: {"count": 0, "amount": 0.0}

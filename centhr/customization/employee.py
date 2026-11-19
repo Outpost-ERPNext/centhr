@@ -6,6 +6,30 @@ from frappe.custom.doctype.property_setter.property_setter import make_property_
 # ABBR resolves to the employee's Company.abbr (erpnext naming_series_variables hook)
 EMPLOYEE_NAMING_SERIES = ".ABBR.-EMP-.#####"
 
+# Employee fields HR must fill. Reports To is handled apart: it is required only
+# when No Line Manager is not ticked (see payroll.validate_line_manager).
+MANDATORY_FIELDS = (
+	"first_name",
+	"gender",
+	"date_of_birth",
+	"date_of_joining",
+	"status",
+	"department",
+	"designation",
+	"employment_type",
+	"grade",
+	"cost_center",
+	"channel",
+	"company_email",
+	"holiday_list",
+	"default_shift",
+	"salary_structure",
+	"employee_base",
+	"from_date",
+	"payroll_payable_account",
+	"marital_status",
+)
+
 
 def create_custom_fields():
 	custom_fields = {
@@ -78,6 +102,13 @@ def create_custom_fields():
 				"insert_after":"from_date",
 				"reqd":1,
 				"link_filters": '[["Account","account_type","=","Payable"]]'
+			},
+			{
+				"fieldname":"custom_no_line_manager",
+				"fieldtype":"Check",
+				"label":"No Line Manager",
+				"insert_after":"cross_company",
+				"description":"Check this box if the employee does not have a line manager."
 			}
    
 		]
@@ -91,6 +122,13 @@ def create_custom_fields():
 				frappe.clear_cache(doctype=doctype)
 
 	set_employee_naming_series()
+	set_mandatory_fields()
+
+
+def set_mandatory_fields():
+	for fieldname in MANDATORY_FIELDS:
+		make_property_setter("Employee", fieldname, "reqd", "1", "Check", validate_fields_for_doctype=False)
+	frappe.clear_cache(doctype="Employee")
 
 
 def set_employee_naming_series():
@@ -102,7 +140,8 @@ def set_employee_naming_series():
 
 
 def delete_custom_fields():
-	custom_fields_to_delete = {"Employee": ["territory", "cost_center", "channel", "cross_company_reports", "cross_company", "salary_structure", "employee_base", "from_date", "payroll_payable_account"]}
+	custom_fields_to_delete = {"Employee": ["territory", "cost_center", "channel", "cross_company_reports", "cross_company", "salary_structure", 
+                                         "employee_base", "from_date", "payroll_payable_account", "custom_no_line_manager"]}
 
 	for doctype, fields in custom_fields_to_delete.items():
 		for field_name in fields:
@@ -114,6 +153,10 @@ def delete_custom_fields():
 	frappe.db.delete(
 		"Property Setter",
 		{"doc_type": "Employee", "field_name": "naming_series", "property": ("in", ["options", "default"])},
+	)
+	frappe.db.delete(
+		"Property Setter",
+		{"doc_type": "Employee", "field_name": ("in", MANDATORY_FIELDS), "property": "reqd"},
 	)
 	frappe.clear_cache(doctype="Employee")
 

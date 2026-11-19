@@ -35,7 +35,7 @@ def approval_fields(insert_after: str, finance_2: bool) -> list[dict]:
 
 CUSTOM_FIELDS = {
 	ADVANCE: [
-		{"fieldname": "purpose_type", "fieldtype": "Select", "label": "Purpose Type", "options": "\nTravel\nOther", "insert_after": "advance_amount"},
+		{"fieldname": "purpose_type", "fieldtype": "Select", "label": "Purpose Type", "options": "\nTravel\nOther\nSalary Advance", "insert_after": "advance_amount"},
 		{"fieldname": "iou_declaration", "fieldtype": "Check", "label": "I hereby declare that I am applying for an IOU. Any amount outstanding after the due date on this IOU will be deducted from my payroll.", "insert_after": "bank_ac_no"},
 		{"fieldname": "payment_advice", "fieldtype": "Attach", "label": "Payment Advice", "read_only": 1, "allow_on_submit": 1, "insert_after": "iou_declaration"},
 		*approval_fields("payment_advice", finance_2=True),

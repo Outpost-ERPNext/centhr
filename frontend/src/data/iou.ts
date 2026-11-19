@@ -4,6 +4,7 @@ export type IOUCategory =
 	| "IOU Application"
 	| "IOU Claim Settlement – No Linked IOU"
 	| "IOU Claim Settlement – Linked IOU"
+	| "Salary Advance"
 
 export interface IOUApproverInfo {
 	user?: string | null
@@ -66,6 +67,7 @@ export interface IOUStats {
 	iou_application: IOUCategoryStat
 	settlement_no_link: IOUCategoryStat
 	settlement_linked: IOUCategoryStat
+	salary_advance: IOUCategoryStat
 	total: IOUCategoryStat
 	advances: IOUCategoryStat
 	pending_approval: IOUCategoryStat

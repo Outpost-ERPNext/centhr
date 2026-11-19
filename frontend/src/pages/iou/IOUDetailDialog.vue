@@ -270,6 +270,9 @@ function categoryClass(category: string) {
 	if (category === "IOU Claim Settlement – No Linked IOU") {
 		return "bg-ch-amber-bg text-ch-amber-ink"
 	}
+	if (category === "Salary Advance") {
+		return "bg-ch-gray-bg text-ch-gray-ink"
+	}
 	return "bg-ch-green-bg text-ch-green-ink"
 }
 

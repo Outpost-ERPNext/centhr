@@ -1,7 +1,7 @@
 <template>
 	<div class="flex h-full flex-col overflow-hidden bg-ch-bg">
 		<!-- Page Header with Breadcrumbs & Actions -->
-		<PageHeader :crumbs="[{ label: 'IOU' }, { label: 'IOU Dashboard' }]">
+		<PageHeader :crumbs="[{ label: 'IOU' }]">
 			<template #actions>
 				<div class="flex items-center gap-2">
 					<Button
@@ -29,8 +29,26 @@
 
 		<!-- Main Scrollable Area -->
 		<div class="min-h-0 flex-1 overflow-y-auto">
+			<nav class="sticky top-0 z-[2] flex gap-1 overflow-x-auto border-b border-ch-line bg-ch-bg px-5" role="tablist" aria-label="IOU">
+				<button
+					v-for="t in TABS"
+					:key="t.key"
+					type="button"
+					role="tab"
+					:aria-selected="tab === t.key"
+					class="-mb-px flex h-11 shrink-0 items-center gap-1.5 border-b-2 px-2 text-[13.5px]"
+					:class="tab === t.key ? 'border-ch-primary font-medium text-ch-ink' : 'border-transparent text-ch-ink-3 hover:text-ch-ink'"
+					@click="tab = t.key"
+				>
+					{{ t.label }}
+					<span v-if="t.stat && stats[t.stat].count" class="rounded-full bg-ch-subtle px-1.5 text-[11.5px] tabular-nums text-ch-ink-2">
+						{{ stats[t.stat].count }}
+					</span>
+				</button>
+			</nav>
+
 			<!-- Advance, approval and overdue totals; each card shows only its rows -->
-			<div class="grid grid-cols-1 gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div v-if="tab === 'dashboard'" class="grid grid-cols-1 gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
 				<StatCard
 					v-for="card in focusCards"
 					:key="card.focus"
@@ -46,7 +64,7 @@
 			</div>
 
 			<!-- Three Colored Category Metric Cards -->
-			<div class="grid grid-cols-1 gap-3 px-5 pt-3 sm:grid-cols-3">
+			<div v-if="tab === 'dashboard'" class="grid grid-cols-1 gap-3 px-5 pt-3 sm:grid-cols-2 lg:grid-cols-4">
 				<!-- Category 1: IOU Application (Blue) -->
 				<StatCard
 					label="IOU Application"
@@ -82,11 +100,23 @@
 					:loading="loading"
 					@click="toggleCategory('IOU Claim Settlement – Linked IOU')"
 				/>
+
+				<!-- Category 4: Salary Advance (Gray) -->
+				<StatCard
+					label="Salary Advance"
+					:value="formatCurrency(stats.salary_advance.amount)"
+					:sub="`${stats.salary_advance.count} salary advances`"
+					tone="gray"
+					clickable
+					:active="selectedCategory === 'Salary Advance'"
+					:loading="loading"
+					@click="toggleCategory('Salary Advance')"
+				/>
 			</div>
 
 			<!-- Active Card Filter Indicators -->
 			<div
-				v-if="selectedCategory || selectedFocus"
+				v-if="tab === 'dashboard' && (selectedCategory || selectedFocus)"
 				class="flex flex-wrap items-center gap-2 px-5 pt-2 text-[12.5px] text-ch-ink-2"
 			>
 				<span>Showing:</span>
@@ -123,7 +153,7 @@
 				:total="rows.length"
 				:active="hasActiveFilters"
 				search-placeholder="Search employee, reference, purpose…"
-				noun="transaction"
+				:noun="activeTab.noun"
 				@clear="clearFilters"
 			>
 				<!-- Company Link Filter -->
@@ -168,7 +198,7 @@
 					row-key="name"
 					clickable
 					empty-icon="lucide-receipt"
-					empty-message="No IOU transactions match the selected filters"
+					:empty-message="`No ${activeTab.label === 'Dashboard' ? 'IOU transactions' : activeTab.label} match the selected filters`"
 					min-width="1160px"
 					@row-click="openDetail"
 				>
@@ -330,6 +360,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import { Button, Checkbox, Dropdown, toast } from "frappe-ui"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import FilterBar from "@/components/FilterBar.vue"
@@ -352,6 +383,41 @@ import { formatCurrency, formatDateShort } from "@/utils/format"
 import IOUActionDialog from "./IOUActionDialog.vue"
 import IOUDetailDialog from "./IOUDetailDialog.vue"
 
+// Dashboard shows every IOU transaction; each other tab shows one category, counted from its card's stat
+type TabKey = "dashboard" | "applications" | "claims-no-link" | "claims-linked" | "salary-advances"
+interface IOUTab {
+	key: TabKey
+	label: string
+	noun: string
+	category?: IOUCategory
+	stat?: keyof IOUStats
+}
+const TABS: IOUTab[] = [
+	{ key: "dashboard", label: "Dashboard", noun: "transaction" },
+	{ key: "applications", label: "IOU Applications", noun: "application", category: "IOU Application", stat: "iou_application" },
+	{
+		key: "claims-no-link",
+		label: "IOU Claim – No Linked IOU",
+		noun: "claim",
+		category: "IOU Claim Settlement – No Linked IOU",
+		stat: "settlement_no_link",
+	},
+	{
+		key: "claims-linked",
+		label: "IOU Claim – Linked IOU",
+		noun: "claim",
+		category: "IOU Claim Settlement – Linked IOU",
+		stat: "settlement_linked",
+	},
+	{ key: "salary-advances", label: "Salary Advances", noun: "advance", category: "Salary Advance", stat: "salary_advance" },
+]
+
+const route = useRoute()
+const router = useRouter()
+const tab = ref<TabKey>(TABS.some((t) => t.key === route.query.tab) ? (route.query.tab as TabKey) : "dashboard")
+const activeTab = computed(() => TABS.find((t) => t.key === tab.value)!)
+watch(tab, (value) => router.replace({ query: { ...route.query, tab: value } }))
+
 // State
 const loading = ref(false)
 const exporting = ref(false)
@@ -364,6 +430,7 @@ const stats = ref<IOUStats>({
 	iou_application: { count: 0, amount: 0 },
 	settlement_no_link: { count: 0, amount: 0 },
 	settlement_linked: { count: 0, amount: 0 },
+	salary_advance: { count: 0, amount: 0 },
 	total: { count: 0, amount: 0 },
 	advances: { count: 0, amount: 0 },
 	pending_approval: { count: 0, amount: 0 },
@@ -418,7 +485,7 @@ const detailOpen = ref(false)
 const selectedRow = ref<IOURow | null>(null)
 
 // Table column definitions
-const columns: Column[] = [
+const ALL_COLUMNS: Column[] = [
 	{ key: "category", label: "Category", width: "160px" },
 	{ key: "name", label: "Reference No", width: "minmax(130px, 1.2fr)", sortable: true },
 	{ key: "advance_type", label: "Advance Type", width: "130px", sortable: true },
@@ -430,6 +497,11 @@ const columns: Column[] = [
 	{ key: "status", label: "Status", width: "130px", sortable: true },
 	{ key: "actions", label: "Actions", width: "150px", align: "right" },
 ]
+
+// Every row on a category tab has that category, so it has no Category column
+const columns = computed(() =>
+	tab.value === "dashboard" ? ALL_COLUMNS : ALL_COLUMNS.filter((column) => column.key !== "category")
+)
 
 const hasActiveFilters = computed(() => {
 	return Boolean(
@@ -444,20 +516,26 @@ const hasActiveFilters = computed(() => {
 	)
 })
 
+/** The cards only drive the Dashboard tab; every other tab is fixed to its own category. */
+function currentFilters() {
+	const fixed = tab.value === "dashboard" ? undefined : activeTab.value.category
+	return {
+		company: selectedCompany.value || undefined,
+		employee: selectedEmployee.value || undefined,
+		advance_type: selectedAdvanceType.value || undefined,
+		status: selectedStatus.value || undefined,
+		category: fixed ?? (selectedCategory.value || undefined),
+		focus: fixed ? undefined : selectedFocus.value || undefined,
+		search: searchQuery.value || undefined,
+		closed: showClosed.value ? 1 : 0,
+	}
+}
+
 async function loadData() {
 	loading.value = true
 	error.value = null
 	try {
-		const res = await getIOUDashboard({
-			company: selectedCompany.value || undefined,
-			employee: selectedEmployee.value || undefined,
-			advance_type: selectedAdvanceType.value || undefined,
-			status: selectedStatus.value || undefined,
-			category: selectedCategory.value || undefined,
-			focus: selectedFocus.value || undefined,
-			search: searchQuery.value || undefined,
-			closed: showClosed.value ? 1 : 0,
-		})
+		const res = await getIOUDashboard(currentFilters())
 		rows.value = res.records || []
 		stats.value = res.stats || stats.value
 		advanceTypes.value = res.advance_types || []
@@ -471,7 +549,7 @@ async function loadData() {
 
 // Watch filters to reload data
 let debounceTimer: any = null
-watch([selectedCompany, selectedEmployee, selectedAdvanceType, selectedStatus, selectedCategory, selectedFocus, showClosed], () => {
+watch([tab, selectedCompany, selectedEmployee, selectedAdvanceType, selectedStatus, selectedCategory, selectedFocus, showClosed], () => {
 	loadData()
 })
 
@@ -573,16 +651,7 @@ async function exportExcel() {
 	exporting.value = true
 	try {
 		await exportIOURecords(
-			{
-				company: selectedCompany.value || undefined,
-				employee: selectedEmployee.value || undefined,
-				advance_type: selectedAdvanceType.value || undefined,
-				status: selectedStatus.value || undefined,
-				category: selectedCategory.value || undefined,
-				focus: selectedFocus.value || undefined,
-				search: searchQuery.value || undefined,
-				closed: showClosed.value ? 1 : 0,
-			},
+			currentFilters(),
 			rows.value.map((r) => r.name)
 		)
 	} catch {
@@ -602,6 +671,7 @@ function shortCategory(cat: string) {
 function categoryBadgeClass(cat: string) {
 	if (cat === "IOU Application") return "bg-ch-blue-bg text-ch-blue-ink"
 	if (cat === "IOU Claim Settlement – No Linked IOU") return "bg-ch-amber-bg text-ch-amber-ink"
+	if (cat === "Salary Advance") return "bg-ch-gray-bg text-ch-gray-ink"
 	return "bg-ch-green-bg text-ch-green-ink"
 }
 
