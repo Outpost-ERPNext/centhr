@@ -45,6 +45,13 @@ def copy_kpi_templates(company: str) -> dict:
 
 
 @frappe.whitelist()
+def get_latest_kpi_month() -> dict | None:
+	"""The newest month that has KPI Templates; None before the first template exists."""
+	month = kpi.get_latest_month()
+	return {"fiscal_year": month.fiscal_year, "month": month.month} if month else None
+
+
+@frappe.whitelist()
 def get_kpi_dashboard(
 	fiscal_year: str, month: str, company: str | None = None, department: str | None = None
 ) -> list[dict]:

@@ -16,6 +16,24 @@ COPY_DAY = 27
 ITEM_FIELDS = ("kpi", "uom", "target", "weight", "polarity")
 
 
+def get_latest_month() -> KpiMonth | None:
+	"""The newest month, up to today, that has KPI Templates the user may see. The KPI pages open on
+	it, so a site whose KPIs stop at an earlier month, such as one that was migrated, shows them."""
+	periods = frappe.get_list(
+		TEMPLATE,
+		filters={"docstatus": ["!=", 2]},
+		fields=["fiscal_year", "month"],
+		group_by="fiscal_year, month",
+		limit=0,
+	)
+	months = [KpiMonth(period.fiscal_year, period.month) for period in periods if period.month in MONTHS]
+	started = [month for month in months if month.starts_by(getdate(today()))]
+	# Templates of months to come only: the first of them is the nearest
+	return (
+		max(started, key=lambda m: m.start) if started else min(months, key=lambda m: m.start, default=None)
+	)
+
+
 class DepartmentTemplates:
 	"""Gives every active employee of a department, or of one designation in it, the same KPIs for a
 	month. Employees who already have a template for the month keep it."""

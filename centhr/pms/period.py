@@ -39,6 +39,9 @@ class KpiMonth:
 				return first
 		frappe.throw(_("{0} is not a month of Fiscal Year {1}.").format(self.month, self.fiscal_year))
 
+	def starts_by(self, day: date) -> bool:
+		return self.start <= day
+
 	def freeze_date(self, freeze_day: int) -> date:
 		"""Last day the month's KPI Templates can change: `freeze_day` of the following month."""
 		following = getdate(add_months(self.start, 1))

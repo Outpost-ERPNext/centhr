@@ -265,6 +265,37 @@ class TestKpiCycle(IntegrationTestCase):
 		self.assertEqual(kpi.MonthlyCopy(self.company, "2031-04-27").run(), [])
 
 
+class TestLatestMonth(IntegrationTestCase):
+	"""Where the KPI pages open."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.fiscal_year = get_fiscal_year_2031()
+		# Three months of the year that have templates, oldest first
+		months = sorted((KpiMonth(cls.fiscal_year, m) for m in ("Mar", "Jun", "Sep")), key=lambda m: m.start)
+		cls.first, cls.second, cls.third = months
+
+	def latest(self, today: date):
+		periods = [
+			frappe._dict(fiscal_year=m.fiscal_year, month=m.month)
+			for m in (self.third, self.first, self.second)
+		]
+		with (
+			patch("centhr.pms.kpi.frappe.get_list", return_value=periods),
+			patch("centhr.pms.kpi.today", return_value=str(today)),
+		):
+			return kpi.get_latest_month()
+
+	def test_opens_on_the_newest_month_that_has_started(self):
+		self.assertEqual(self.latest(self.second.start), self.second)
+		# Long after the last KPIs, as on a site whose history was migrated
+		self.assertEqual(self.latest(date(2040, 1, 1)), self.third)
+
+	def test_opens_on_the_first_month_when_all_are_still_to_come(self):
+		self.assertEqual(self.latest(date(2020, 1, 1)), self.first)
+
+
 class TestKpiMonth(IntegrationTestCase):
 	def test_month_dates_follow_the_fiscal_year(self):
 		fiscal_year = frappe._dict(year_start_date=date(2031, 4, 1), year_end_date=date(2032, 3, 31))

@@ -76,6 +76,9 @@ export function copyKpiTemplates(company: string) {
 }
 
 /** The fiscal year today falls in, to open the KPI pages on the current month. */
+/** The newest month that has KPI Templates, or null before the first one exists. */
+export const getLatestKpiMonth = () => api<{ fiscal_year: string; month: string } | null>(`${METHOD}.get_latest_kpi_month`, {}, { silent: true }).catch(() => null)
+
 export async function getCurrentFiscalYear(): Promise<string> {
 	const today = toISODate(new Date())
 	const rows = await getList<{ name: string }>({

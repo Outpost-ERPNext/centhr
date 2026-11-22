@@ -19,10 +19,12 @@
 import { useRoute, useRouter } from "vue-router"
 import { Select } from "frappe-ui"
 import FilterLink from "@/components/FilterLink.vue"
-import { currentMonth, getCurrentFiscalYear, MONTHS, type KpiScope } from "@/data/pms"
+import { currentMonth, getCurrentFiscalYear, getLatestKpiMonth, MONTHS, type KpiScope } from "@/data/pms"
 
 /** The fiscal year, month, company and department the KPI pages work on. It lives in the URL, so
- * Back and a shared link show the same month. Opens on the current month. */
+ * Back and a shared link show the same month. Without one in the URL it opens on the newest month
+ * that has KPI Templates: the current month in normal use, an earlier one when the KPIs stop
+ * earlier, as on a site whose history was migrated. */
 const scope = defineModel<KpiScope>({ required: true })
 const route = useRoute()
 const router = useRouter()
@@ -31,9 +33,11 @@ const MONTH_OPTIONS = MONTHS.map((month) => ({ label: month, value: month }))
 const query = (key: string) => (typeof route.query[key] === "string" ? (route.query[key] as string) : "")
 
 async function init() {
+	const chosen = query("fy") && MONTHS.includes(query("month"))
+	const latest = chosen ? null : await getLatestKpiMonth()
 	scope.value = {
-		fiscalYear: query("fy") || (await getCurrentFiscalYear()),
-		month: MONTHS.includes(query("month")) ? query("month") : currentMonth(),
+		fiscalYear: query("fy") || latest?.fiscal_year || (await getCurrentFiscalYear()),
+		month: MONTHS.includes(query("month")) ? query("month") : latest?.month || currentMonth(),
 		company: query("company"),
 		department: query("department"),
 	}
