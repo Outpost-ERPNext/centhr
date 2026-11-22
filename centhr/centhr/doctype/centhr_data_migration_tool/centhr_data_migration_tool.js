@@ -301,6 +301,7 @@ centhr.migration.SECTIONS = {
 		doctype: "KPI Result",
 		label: __("KPI Result"),
 		filters: ["fiscal_year", "month", "employee"],
+		hint: __("A KPI Result brings its KPI Template along, so this tab migrates both."),
 		columns: [
 			["employee", __("Employee")],
 			["employee_name", __("Employee Name")],
@@ -471,6 +472,14 @@ for (const section of Object.keys(centhr.migration.SECTIONS)) {
 
 frappe.ui.form.on("Centhr Data Migration Tool", form_events);
 
+// What each filter takes while it is empty
+centhr.migration.EMPTY_FILTERS = {
+	employee: __("All employees"),
+	fiscal_year: __("All fiscal years"),
+	salary_component: __("All salary components"),
+	leave_type: __("All leave types"),
+};
+
 centhr.migration.MigrationTable = class MigrationTable {
 	constructor(frm, section) {
 		this.frm = frm;
@@ -478,7 +487,18 @@ centhr.migration.MigrationTable = class MigrationTable {
 		this.config = centhr.migration.SECTIONS[section];
 		this.$summary = frm.get_field(`${section}_summary`).$wrapper;
 		this.$table = frm.get_field(`${section}_table`).$wrapper;
+		this.show_empty_filters();
 		this.reset();
+	}
+
+	/** An empty filter is not applied; its box says what that takes, so nobody fills it in to get everything. */
+	show_empty_filters() {
+		for (const key of this.config.filters) {
+			const field = this.frm.get_field(`${this.section}_${key}`);
+			if (centhr.migration.EMPTY_FILTERS[key] && field.$input) {
+				field.$input.attr("placeholder", centhr.migration.EMPTY_FILTERS[key]);
+			}
+		}
 	}
 
 	reset() {
@@ -487,9 +507,14 @@ centhr.migration.MigrationTable = class MigrationTable {
 		this.running = false;
 		this.stopping = false;
 		this.$table.empty();
-		this.$summary.html(
-			`<div class="text-muted">${__("Set the filters and click Fetch Details.")}</div>`
-		);
+		const hints = [__("Set the filters and click Fetch Details.")];
+		if (this.config.filters.includes("employee")) {
+			hints.push(__("Leave Employee empty to fetch the records of every employee."));
+		}
+		if (this.config.hint) {
+			hints.push(this.config.hint);
+		}
+		this.$summary.html(`<div class="text-muted">${hints.join(" ")}</div>`);
 	}
 
 	fetch() {

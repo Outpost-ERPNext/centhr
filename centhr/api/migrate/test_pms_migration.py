@@ -54,7 +54,9 @@ class FakeSite:
 		return {"name": name, "doctype": doctype, **docs[name]}
 
 
-class TestPmsMigration(IntegrationTestCase):
+class PmsMigrationCase(IntegrationTestCase):
+	"""Three employees here and a simulated CentHR site that holds one PMS cycle of the first."""
+
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -212,6 +214,8 @@ class TestPmsMigration(IntegrationTestCase):
 	def note_of(self, result) -> str:
 		return frappe.db.get_value("CentHR API Logger", result.log, "error") or ""
 
+
+class TestPmsMigration(PmsMigrationCase):
 	def test_the_twelve_tabs_in_order(self):
 		ann = self.ann.name
 		period = {"fiscal_year": self.fiscal_year, "quarter": "Q1"}
@@ -307,11 +311,41 @@ class TestPmsMigration(IntegrationTestCase):
 		fetched = KpiTemplateMigrator(self.company).fetch({})
 		self.assertEqual([row["migration_status"] for row in fetched], ["Success"])
 
-	def test_a_result_waits_for_its_template(self):
-		migrator = KpiResultMigrator(self.company)
-		name = next(iter(self.site.records["KPI Result"]))
-		with patch("centhr.api.migrate.kpi_result.find_local", return_value=None):
-			result = migrator.migrate(name)
+
+class TestKpiResultMigration(PmsMigrationCase):
+	"""The KPI Result tab alone: a result brings its KPI Template along."""
+
+	def test_a_result_brings_its_template_along(self):
+		for migrator_class in (KpiUomMigrator, PmsSettingsMigrator):
+			self.migrate(migrator_class)
+		ann = self.ann.name
+		self.assertFalse(frappe.db.exists("KPI Template", {"employee": ann}))
+
+		(result,) = self.migrate(KpiResultMigrator)
+
+		template = frappe.db.get_value("KPI Template", {"employee": ann, "month": "Jan", "docstatus": 1})
+		self.assertEqual(template, f"KPI-T|01-{self.fiscal_year}|{ann}")
+		self.assertEqual(frappe.db.get_value("KPI Result", result.local_name, "kpi_template"), template)
+		self.assertIn(template, self.note_of(result))
+		# The template has its own log, so the KPI Template tab shows it as migrated
+		fetched = KpiTemplateMigrator(self.company).fetch({})
+		self.assertEqual([row["migration_status"] for row in fetched], ["Success"])
+		# The submitted template made no second result
+		self.assertEqual(frappe.db.count("KPI Result", {"employee": ann}), 1)
+
+	def test_a_result_fails_when_its_template_cannot_come(self):
+		name = f"KPI-R|02-{self.fiscal_year}|{BEN}|{BOSS}"
+		self.site.records["KPI Result"][name] = {
+			"employee": BEN,
+			"fiscal_year": self.fiscal_year,
+			"month": "Feb",
+			"kpi_template": "KPI-T|GONE",
+			"docstatus": 1,
+			"items": [],
+		}
+		self.addCleanup(self.site.records["KPI Result"].pop, name)
+
+		result = KpiResultMigrator(self.company).migrate(name)
 
 		self.assertEqual(result.status, "Failed")
-		self.assertIn("KPI Template tab first", result.error)
+		self.assertIn("KPI-T|GONE could not be migrated", result.error)
