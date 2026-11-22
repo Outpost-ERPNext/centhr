@@ -144,6 +144,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue"
+import { useRoute } from "vue-router"
 import { Button, Dialog, Dropdown, dialog, toast } from "frappe-ui"
 import PageHeader from "@/components/layout/PageHeader.vue"
 import DataTable, { type Column } from "@/components/DataTable.vue"
@@ -161,6 +162,8 @@ const API = "centhr.api.bulk_salary_structure_assignment"
 type Created = { name: string; employee: string; employee_name?: string }
 type RunResult = { queued: boolean; created?: Created[]; failed?: string[] }
 
+// Employees ticked on the Payroll Dashboard's audit; they are chosen here once the list shows them
+const preselected = String(useRoute().query.employees || "").split(",").filter(Boolean)
 const ready = ref(false)
 const doc = ref<Record<string, any>>({})
 const rows = ref<Record<string, any>[]>([])
@@ -274,7 +277,10 @@ async function loadRows() {
 			values: doc.value,
 			advanced_filters: advancedFilters.value,
 		})
-		if (id === requestId) rows.value = data || []
+		if (id === requestId) {
+			rows.value = data || []
+			selected.value = preselected.filter((employee) => rows.value.some((row) => row.employee === employee))
+		}
 	} catch {
 		if (id === requestId) rows.value = []
 	} finally {

@@ -16,7 +16,8 @@
 		</div>
 		<p class="text-[12.5px] text-ch-ink-3">
 			Working days leave out holidays and days before joining or after leaving. Unmarked days are past working days with no
-			attendance; payroll pays them only once attendance is marked.
+			attendance; payroll pays them only once attendance is marked. Days in a leave application or attendance request that is still
+			open count as awaiting approval, not as unmarked.
 		</p>
 	</div>
 
@@ -33,7 +34,7 @@
 		empty-icon="lucide-calendar-check"
 		empty-message="No employees match these filters"
 		mobile-aside="paid_days"
-		min-width="1080px"
+		min-width="1180px"
 		@row-click="(row) => router.push({ path: '/attendance', query: { employee: row.name } })"
 		@clear-filters="clear"
 	>
@@ -136,6 +137,7 @@ const columns: Column[] = [
 	days("LWP", "unpaid_leave"),
 	days("Absent", "absent"),
 	days("Unmarked", "unmarked"),
+	{ key: "pending_request", label: "Awaiting approval", width: "110px", align: "right", format: (_v, r) => formatNumber(r.pending_leave + r.pending_request) },
 	days("Paid days", "paid_days"),
 	{ key: "slip_status", label: "Salary slip", width: "110px" },
 ]

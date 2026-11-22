@@ -7,10 +7,13 @@ from centhr.payroll_dashboard import (
 	advances,
 	analytics,
 	audit,
+	auto_attendance,
 	compliance,
 	master_sheet,
+	payment_request,
 	processing,
 	reconcile,
+	reminders,
 	reports,
 	settings,
 )
@@ -24,8 +27,11 @@ def get_audit(from_date: str, to_date: str, company: str | None = None) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def set_payroll_hold(employee: str, from_date: str, to_date: str, reason: str | None = None) -> str:
-	return audit.set_hold(employee, Scope.make(from_date, to_date), reason)
+def set_payroll_hold(
+	employee: str, from_date: str, to_date: str, reason: str | None = None, cycles: int = 1
+) -> str:
+	"""Hold the employee's salary from this cycle on: for `cycles` cycles, or until released when 0."""
+	return audit.set_hold(employee, Scope.make(from_date, to_date), reason, cycles)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -33,11 +39,16 @@ def release_payroll_hold(withholding: str):
 	audit.release_hold(withholding)
 
 
+@frappe.whitelist(methods=["POST"])
+def release_payroll_holds(withholdings: list[str] | str) -> dict:
+	return audit.release_holds(parse(withholdings))
+
+
 @frappe.whitelist()
 def get_attendance(from_date: str, to_date: str, company: str | None = None) -> list[dict]:
 	frappe.has_permission("Attendance", "read", throw=True)
 	scope = Scope.make(from_date, to_date, company)
-	rows = [frappe._dict(r) for r in SalaryOverview(company, scope.from_date, scope.to_date).get_rows()]
+	rows = [frappe._dict(r) for r in scope.get_employees()]
 	summary = AttendanceSummary(scope).summarize(rows)
 	return [
 		{
@@ -64,7 +75,44 @@ def get_processing(from_date: str, to_date: str, company: str | None = None) -> 
 
 @frappe.whitelist(methods=["POST"])
 def update_salary_slips(action: str, names: list[str] | str) -> dict:
-	return processing.update_slips(action, frappe.parse_json(names) if isinstance(names, str) else names)
+	return processing.update_slips(action, parse(names))
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_negative_salary_slips(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""Delete the cycle's draft salary slips whose net pay is below zero."""
+	return processing.delete_negative_slips(Scope.make(from_date, to_date, company))
+
+
+@frappe.whitelist()
+def get_payout_list(payroll_entry: str) -> dict:
+	"""Who a payroll entry pays, with their bank details."""
+	return processing.get_payout_list(payroll_entry)
+
+
+@frappe.whitelist()
+def export_payout_list(payroll_entry: str):
+	processing.export_payout_list(payroll_entry)
+
+
+@frappe.whitelist(methods=["POST"])
+def decide_payment_request(name: str, approve: bool | int, reason: str | None = None) -> dict:
+	"""Approve or reject a Payment Request Form. Only Accounts may."""
+	return payment_request.decide(name, bool(frappe.utils.cint(approve)), reason)
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_auto_attendance(from_date: str, to_date: str, company: str | None = None) -> dict:
+	"""Mark Present on the unmarked working days of employees whose salary structure asks for it."""
+	return auto_attendance.mark(Scope.make(from_date, to_date, company))
+
+
+@frappe.whitelist(methods=["POST"])
+def send_payroll_reminders(
+	from_date: str, to_date: str, company: str | None = None, employees: list[str] | str | None = None
+) -> dict:
+	"""Remind employees of unmarked attendance and approvers of open leave and attendance requests."""
+	return reminders.Reminders(Scope.make(from_date, to_date, company)).send(parse(employees))
 
 
 @frappe.whitelist()
@@ -97,6 +145,17 @@ def request_obligation_payment(obligation: str, amount: float, payment_account: 
 	return compliance.request_payment(obligation, amount, payment_account)
 
 
+@frappe.whitelist()
+def get_obligation_breakdown(obligation: str, from_date: str, to_date: str) -> dict:
+	"""The employees and salary components an obligation's liability of the cycle comes from."""
+	return compliance.ObligationBreakdown(obligation, Scope.make(from_date, to_date)).run()
+
+
+@frappe.whitelist()
+def export_obligation_breakdown(obligation: str, from_date: str, to_date: str):
+	compliance.ObligationBreakdown(obligation, Scope.make(from_date, to_date)).export()
+
+
 # Settings of the chosen company
 
 
@@ -106,9 +165,12 @@ def get_payroll_settings(company: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def save_payroll_settings(company: str, start_day: int, auto_recover_advances: bool | int = False) -> dict:
-	"""The company's pay cycle start day and whether payroll recovers overdue advances."""
-	return settings.save_settings(company, start_day, bool(int(auto_recover_advances)))
+def save_payroll_settings(
+	company: str, start_day: int, auto_recover_advances: bool | int = False, site: dict | str | None = None
+) -> dict:
+	"""The company's pay cycle start day and whether payroll recovers overdue advances. `site` holds
+	the calculation rules of HRMS's Payroll Settings, which apply to every company."""
+	return settings.save_settings(company, start_day, bool(int(auto_recover_advances)), parse(site))
 
 
 @frappe.whitelist(methods=["POST"])
@@ -192,5 +254,12 @@ def get_column_mapping(scope: Scope) -> master_sheet.ColumnMapping:
 
 
 @frappe.whitelist()
-def get_advance_details(name: str) -> dict:
-	return advances.get_advance_details(name)
+def get_advance_details(name: str, from_date: str | None = None, to_date: str | None = None) -> dict:
+	"""With a pay cycle, also where the advance's recovery stands in it."""
+	scope = Scope.make(from_date, to_date) if from_date and to_date else None
+	return advances.get_advance_details(name, scope)
+
+
+def parse(value):
+	"""A list or dict argument arrives as JSON from a form post."""
+	return frappe.parse_json(value) if isinstance(value, str) else value

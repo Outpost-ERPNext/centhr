@@ -3,6 +3,8 @@ from frappe import _
 from frappe.utils import getdate
 from frappe.utils.xlsxutils import build_xlsx_response
 
+from centhr.payroll_dashboard import confidential
+
 # Label and row key of each column in the Excel export
 EXPORT_COLUMNS = [
 	(_("Employee ID"), "name"),
@@ -47,7 +49,8 @@ def export_salary_overview(
 
 class SalaryOverview:
 	"""Active employees plus those who left in the period, as they still get a final salary slip.
-	Every query goes through get_list, so the user's permissions apply."""
+	Every query goes through get_list, so the user's permissions apply. Employees on a confidential
+	salary structure the user may not see are left out altogether."""
 
 	def __init__(self, company: str | None, from_date: str, to_date: str):
 		# Employees and their records are filtered by company only when one is chosen
@@ -57,6 +60,8 @@ class SalaryOverview:
 
 	def get_rows(self) -> list[dict]:
 		employees = self.get_employees()
+		hidden = confidential.get_hidden_employees([e.name for e in employees], self.to_date)
+		employees = [e for e in employees if e.name not in hidden]
 		names = [e.name for e in employees]
 		assignments = self.get_assignments(names)
 		slips = self.get_slips(names)
@@ -133,12 +138,14 @@ class SalaryOverview:
 		)
 
 	def get_inactive_structures(self, structures: set[str]) -> set[str]:
+		"""Structures payroll skips: switched off, or not submitted (any more)."""
 		if not structures:
 			return set()
 		return set(
 			frappe.get_all(
 				"Salary Structure",
-				filters={"name": ["in", list(structures)], "is_active": "No"},
+				filters={"name": ["in", list(structures)]},
+				or_filters=[["is_active", "!=", "Yes"], ["docstatus", "!=", 1]],
 				pluck="name",
 			)
 		)

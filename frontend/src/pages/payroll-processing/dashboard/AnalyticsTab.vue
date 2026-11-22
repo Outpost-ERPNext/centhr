@@ -44,9 +44,22 @@
 			:error="error"
 			empty-icon="lucide-chart-column"
 			empty-message="No salary slips in this cycle"
-			min-width="900px"
-			@row-click="(row) => router.push(routeFor('Salary Slip', row.name)!)"
+			min-width="1000px"
+			@row-click="(row) => (quickView = row.name)"
 		>
+			<template #cell-journal_entry="{ row }">
+				<a
+					v-if="row.journal_entry"
+					:href="`/desk/journal-entry/${encodeURIComponent(row.journal_entry)}`"
+					target="_blank"
+					class="text-ch-primary hover:underline"
+					:title="`Open journal entry ${row.journal_entry}`"
+					@click.stop
+				>
+					{{ row.journal_entry }}
+				</a>
+				<span v-else class="text-ch-ink-3">—</span>
+			</template>
 			<template #cell-employee_name="{ row }">
 				<EmployeeCell :employee="row.employee" :name="row.employee_name" />
 			</template>
@@ -66,24 +79,26 @@
 			</template>
 		</DataTable>
 	</div>
+
+	<SalarySlipQuickView :name="quickView" readonly @close="quickView = null" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { useRouter } from "vue-router"
 import DataTable, { type Column } from "@/components/DataTable.vue"
 import SegmentedTabs from "@/components/SegmentedTabs.vue"
 import StatCard from "@/components/StatCard.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import SalarySlipQuickView from "../SalarySlipQuickView.vue"
 import EmployeeCell from "./EmployeeCell.vue"
 import { cycleLabel } from "@/data/payroll"
 import { getAnalytics, useTabData, type Scope } from "@/data/payrollDashboard"
 import { formatCurrency, formatNumber } from "@/utils/format"
 import type { Tone } from "@/utils/status"
-import { routeFor } from "@/utils/routes"
 
 const props = defineProps<{ scope: Scope }>()
-const router = useRouter()
+// The salary slip a row was opened for
+const quickView = ref<string | null>(null)
 
 const VIEWS = [
 	{ label: "By department", value: "department" },
@@ -137,7 +152,7 @@ const columns = computed<Column[]>(() => {
 		case "months":
 			return [{ key: "period", label: "Pay cycle", width: "minmax(180px,1.6fr)", class: "font-medium" }, count("Headcount", "headcount"), amount("Gross", "gross_pay"), amount("Deductions", "total_deduction"), amount("Net pay", "net_pay"), share]
 		default:
-			return [employee, amount("Salary earnings", "gross_pay"), amount("Deductions", "total_deduction"), amount("Net pay", "net_pay"), amount("Journal net", "journal_net"), amount("Variance", "variance"), { key: "journal_status", label: "Journal status", width: "140px" }]
+			return [employee, amount("Salary earnings", "gross_pay"), amount("Deductions", "total_deduction"), amount("Net pay", "net_pay"), amount("Journal net", "journal_net"), amount("Variance", "variance"), { key: "journal_entry", label: "Journal entry", width: "minmax(140px,1.1fr)" }, { key: "journal_status", label: "Journal status", width: "140px" }]
 	}
 })
 </script>

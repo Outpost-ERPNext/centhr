@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "autoname": "field:salary_structure",
+ "creation": "2026-11-21 10:00:00.000000",
+ "description": "How payroll treats one salary structure: whether the employees it pays are confidential, who may see them and which payroll batch pays them, and whether their attendance is marked automatically.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "salary_structure",
+  "company",
+  "disabled",
+  "column_break_rules",
+  "confidential",
+  "allowed_role",
+  "batch_name",
+  "auto_attendance"
+ ],
+ "fields": [
+  {
+   "fieldname": "salary_structure",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Salary Structure",
+   "options": "Salary Structure",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fetch_from": "salary_structure.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "column_break_rules",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Only users with the role below see the employees on this structure, their salary slips and their amounts.",
+   "fieldname": "confidential",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Confidential"
+  },
+  {
+   "depends_on": "confidential",
+   "fieldname": "allowed_role",
+   "fieldtype": "Link",
+   "label": "Allowed Role",
+   "mandatory_depends_on": "confidential",
+   "options": "Role"
+  },
+  {
+   "depends_on": "confidential",
+   "description": "These employees are paid by their own Payroll Entry of this batch, for example Confidential or Expat.",
+   "fieldname": "batch_name",
+   "fieldtype": "Data",
+   "label": "Payroll Batch",
+   "mandatory_depends_on": "confidential"
+  },
+  {
+   "description": "Working days without attendance are marked Present for the employees on this structure.",
+   "fieldname": "auto_attendance",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Mark Attendance Automatically"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-21 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "centhr",
+ "name": "Payroll Structure Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "salary_structure"
+}

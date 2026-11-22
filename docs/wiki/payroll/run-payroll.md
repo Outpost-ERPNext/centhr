@@ -55,6 +55,18 @@ CentHR creates a monthly payroll entry for the cycle and submits it. HRMS then c
 
 For more than 30 employees, HRMS creates the slips in the background. The run card shows "Working in the background. This updates by itself." Wait until the message goes away.
 
+### Batches
+
+**Generate** offers one batch at a time:
+
+| Batch | Pays |
+|---|---|
+| **Regular payroll** | Employees who are still with the company |
+| **Exited employees** | Employees whose relieving date is in the cycle |
+| A confidential batch | Employees on a confidential salary structure, also those who left in the cycle. Only users with the role of the structure see this batch. See [Payroll settings](payroll-dashboard#payroll-settings) |
+
+Each batch has its own payroll entry.
+
 **Generate payroll** is not available when:
 
 - No company is selected.
@@ -67,9 +79,14 @@ Each payroll entry has a card. The card shows:
 
 - The entry number. Select it to open the payroll entry.
 - The status and the number of employees.
-- Three stages: **Salary slips created**, **Salary slips submitted** and **Bank entry made**. A green tick marks a stage that is done.
+- The batch, if it is not the regular batch.
+- Five stages: **Salary slips created**, **Salary slips submitted**, **Payment requested**, **Payment approved** and **Bank entry made**. A green tick marks a stage that is done.
 - The button for the next step.
+- The payment request of the run, with its status, amount and the people who requested and approved it.
+- **Payout list**: the employees of the run with their bank, account number and net pay. Employees paid by bank without an account number show in red. Select **Export (Excel)** to download the list.
 - The bank entries that the run made, as Draft or Submitted. Select one to open it in Desk.
+
+If the cycle has more than one status of payroll entry, a filter above the cards shows the entries of one status.
 
 ## Steps of a run
 
@@ -80,7 +97,8 @@ The card shows one step button at a time.
 | **Submit payroll** | Shows only for a draft payroll entry. Submits the entry and creates the draft salary slips. |
 | **Create salary slips** | Shows when a submitted entry has no slips. Creates the slips again. |
 | **Submit salary slips** | Submits all draft slips of the run. This books the payroll accrual. You cannot change the slips after this step. |
-| **Make bank entry** | Creates a draft bank entry that pays the salaries. |
+| **Request payment** | Creates a Payment Request Form for the salaries of the run. Accounts approves or rejects it. |
+| **Make bank entry** | Shows after the payment request is approved. Creates a draft bank entry that pays the salaries. |
 | **Release withheld salaries** | Shows when the run has withheld salaries and a bank entry. Creates the bank entry for the withheld salaries. |
 
 A confirmation shows before each step.
@@ -89,7 +107,7 @@ A confirmation shows before each step.
 
 Do this before you select **Submit salary slips**.
 
-1. Under **Salary slips**, select **Draft** to show the draft slips.
+1. Under **Salary slips**, select **Draft** to show the draft slips. **Failed** shows the slips of payroll entries that failed.
 2. Check the work days, absent days, leave without pay (LWP), pay days, gross pay, deductions and net pay of each slip. Absent days show in red. A net pay of zero or less shows in red.
 3. To find a slip, search by name or ID, or filter by department.
 4. Select a row to open the slip.
@@ -101,6 +119,10 @@ To correct a draft slip:
 
 To act on many slips, select them with the checkboxes. Then select **Submit**, **Recalculate** or **Delete**. These actions change only draft slips.
 
+Select **Bank details** to show the mode of payment, the bank and the account number of each slip in place of the day columns.
+
+If draft slips have a net pay below zero, **Delete *n* negative drafts** shows. It deletes these drafts. See [Payroll Dashboard](payroll-dashboard#delete-negative-draft-slips).
+
 Select **Export (Excel)** to download the slips that the table shows.
 
 ## Submit the salary slips
@@ -110,11 +132,25 @@ Select **Export (Excel)** to download the slips that the table shows.
 
 ## Pay the salaries
 
-1. On the run card, select **Make bank entry**.
+Accounts approves the payment before the bank entry is made.
+
+1. On the run card, select **Request payment**.
 2. In **Pay from**, select the bank or cash account. It must be an account of the same company.
 3. Select **Continue**.
 
-CentHR creates the bank entry as a draft journal entry. Accounts reviews and submits it in Desk.
+CentHR creates a Payment Request Form with the status **Pending Approval**. The amount is what the accrual journal credited to payroll payable for the run, without the withheld salaries. A run has one payment request at a time.
+
+A user with the role Accounts Manager or System Manager decides on the request. On the run card, they select **Approve** or **Reject**. A rejection needs a reason. After a rejection, you can correct the cause and select **Request payment** again.
+
+After the approval:
+
+1. On the run card, select **Make bank entry**.
+2. Check the account in **Pay from**.
+3. Select **Continue**.
+
+CentHR creates the bank entry as a draft journal entry. Accounts reviews and submits it in Desk. The payment request then gets the status **Paid**.
+
+The **Make Bank Entry** button of the Payroll Entry form in Desk does not ask for a payment request. Use the run card.
 
 ## Pay withheld salaries
 
@@ -130,7 +166,7 @@ CentHR creates a second draft bank entry for the withheld salaries. Accounts rev
 
 ## When a step fails
 
-If a step fails, the run status is **Failed** and the card shows the error in red. Fix the cause, then select the step button again.
+If a step fails, the run status is **Failed** and the card shows the error in red. Fix the cause, then select the step button again. If no salary slips were created, the button is **Create salary slips**. If the slips were not submitted, it is **Submit salary slips**.
 
 For example, "Added tax components from the Salary Component master as the salary structure didn't have any tax component" means that the salary structure has no tax component. Add it to the salary structure, then recalculate the slips.
 
@@ -139,6 +175,6 @@ For example, "Added tax components from the Salary Component master as the salar
 1. On the run card, select **⋯ > Cancel payroll**.
 2. Confirm.
 
-CentHR deletes the salary slips of the run and cancels its journal entries. Only users who can cancel Payroll Entry see this option.
+CentHR deletes the salary slips of the run and cancels its journal entries. It closes an open payment request of the run. A submitted bank entry blocks the cancellation: cancel the bank entry first. Only users who can cancel Payroll Entry see this option.
 
 CentHR sends each payroll entry to the site of its company.

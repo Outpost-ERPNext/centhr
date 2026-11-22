@@ -319,6 +319,12 @@ doc_events = {
 		"on_update_after_submit": "centhr.api.update.payroll_entry.enqueue_payroll_entry_update",
 		"on_trash": "centhr.api.delete.payroll_entry.enqueue_payroll_entry_delete",
 	},
+	# A payment request is Paid once the bank entry made for it is submitted
+	"Journal Entry": {
+		"on_submit": "centhr.centhr.doctype.payment_request_form.payment_request_form.follow_bank_entry",
+		"on_cancel": "centhr.centhr.doctype.payment_request_form.payment_request_form.follow_bank_entry",
+		"on_trash": "centhr.centhr.doctype.payment_request_form.payment_request_form.follow_bank_entry",
+	},
 }
 
 # Scheduled Tasks
@@ -350,6 +356,7 @@ scheduler_events = {
 		"centhr.iou.scheduler.schedule_salary_recovery",
 		"centhr.pms.kpi.copy_templates_to_current_month",
 		"centhr.pms.peers.refresh_all_companies",
+		"centhr.payroll_dashboard.auto_attendance.mark_current_cycles",
 	],
 	"hourly": [
 		"centhr.iou.scheduler.escalate_to_proxies",
@@ -359,11 +366,18 @@ scheduler_events = {
 permission_query_conditions = {
 	"KPI Template": "centhr.pms.permissions.get_permission_query_conditions",
 	"KPI Result": "centhr.pms.permissions.get_permission_query_conditions",
+	# Confidential salary structures (Payroll Structure Rule)
+	"Salary Slip": "centhr.payroll_dashboard.confidential.get_structure_conditions",
+	"Salary Structure Assignment": "centhr.payroll_dashboard.confidential.get_assignment_conditions",
+	"Payroll Entry": "centhr.payroll_dashboard.confidential.get_entry_conditions",
 }
 
 has_permission = {
 	"KPI Template": "centhr.pms.permissions.has_permission",
 	"KPI Result": "centhr.pms.permissions.has_permission",
+	"Salary Slip": "centhr.payroll_dashboard.confidential.has_structure_permission",
+	"Salary Structure Assignment": "centhr.payroll_dashboard.confidential.has_structure_permission",
+	"Payroll Entry": "centhr.payroll_dashboard.confidential.has_entry_permission",
 }
 
 # Testing

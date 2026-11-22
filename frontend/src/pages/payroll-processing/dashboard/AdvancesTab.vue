@@ -63,7 +63,7 @@
 				<h3 class="text-[14px] font-medium text-ch-ink">Deductions this cycle</h3>
 				<span class="text-[12.5px] text-ch-ink-3">Additional Salary deductions dated in the cycle</span>
 			</header>
-			<DataTable :columns="deductionColumns" :rows="deductions" :loading="loading" empty-icon="lucide-minus-circle" empty-message="No deductions in this cycle" min-width="760px" @row-click="openDeduction">
+			<DataTable :columns="deductionColumns" :rows="deductions" :loading="loading" empty-icon="lucide-minus-circle" empty-message="No deductions in this cycle" min-width="900px" @row-click="openDeduction">
 				<template #cell-employee_name="{ row }">
 					<EmployeeCell :employee="row.employee" :name="row.employee_name" />
 				</template>
@@ -90,7 +90,7 @@
 		</template>
 	</Dialog>
 
-	<AdvanceQuickView :name="quickView" @close="quickView = null" @recover="recoverFromQuickView" />
+	<AdvanceQuickView :name="quickView" :scope="scope" @close="quickView = null" @recover="recoverFromQuickView" />
 
 	<Dialog :open="!!deduction" title="Salary deduction" @update:open="(value: boolean) => !value && (deduction = null)">
 		<dl v-if="deduction" class="text-[13px]">
@@ -101,6 +101,7 @@
 		</dl>
 		<template #actions>
 			<div class="flex justify-end gap-2">
+				<Button v-if="deduction?.salary_slip" icon-left="lucide-receipt" label="Salary slip" :route="routeFor('Salary Slip', deduction.salary_slip)!" />
 				<Button icon-left="lucide-external-link" label="Open in Desk" @click="openDesk('additional-salary', deduction!.name)" />
 			</div>
 		</template>
@@ -120,6 +121,7 @@ import EmployeeCell from "./EmployeeCell.vue"
 import { getAdvances, recoverAdvance, recoverOverdueAdvances, useTabData, type AdvanceDetails, type Scope } from "@/data/payrollDashboard"
 import { can } from "@/data/permissions"
 import { formatCurrency, formatDateShort } from "@/utils/format"
+import { routeFor } from "@/utils/routes"
 
 const props = defineProps<{ scope: Scope }>()
 const { data, loading, error, reload } = useTabData(props.scope, getAdvances)
@@ -174,6 +176,7 @@ const deductionFacts = computed(() => [
 	{ label: "Component", value: deduction.value!.salary_component },
 	{ label: "Amount", value: formatCurrency(deduction.value!.amount, deduction.value!.currency) },
 	{ label: "Payroll date", value: formatDateShort(deduction.value!.payroll_date) },
+	{ label: "Salary slip", value: deduction.value!.salary_slip || "Not on a salary slip yet" },
 	{ label: "Record", value: deduction.value!.name },
 ])
 
@@ -216,6 +219,7 @@ const deductionColumns: Column[] = [
 	{ key: "salary_component", label: "Component", width: "minmax(140px,1.2fr)" },
 	{ key: "ref_docname", label: "Employee advance", width: "minmax(140px,1.2fr)" },
 	{ key: "payroll_date", label: "Payroll date", width: "110px", format: (v) => formatDateShort(v) },
+	{ key: "salary_slip", label: "Salary slip", width: "minmax(150px,1.2fr)", format: (v) => v || "Not on a slip yet" },
 	money("Amount", "amount"),
 ]
 </script>

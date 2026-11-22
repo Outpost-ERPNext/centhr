@@ -5,7 +5,8 @@
 			<RouterLink :to="routeFor('Payroll Entry', run.name)!" class="font-medium text-ch-ink hover:underline">{{ run.name }}</RouterLink>
 			<StatusBadge pill doctype="Payroll Entry" :status="run.status" />
 			<StatusBadge v-if="run.batch === 'Exited'" pill tone="red" status="Exited employees" />
-			<StatusBadge v-if="payment" pill :tone="payment.tone" :status="payment.label" />
+			<StatusBadge v-else-if="run.batch !== 'Regular'" pill tone="blue" :status="`${run.batch} batch`" />
+			<StatusBadge v-if="request" pill :tone="REQUEST_TONES[request.status]" :status="`Payment ${request.status.toLowerCase()}`" />
 			<span class="text-ch-ink-3">{{ formatNumber(run.number_of_employees) }} employees</span>
 
 			<div class="ml-auto flex items-center gap-1.5">
@@ -24,6 +25,7 @@
 					:disabled="busy"
 					@click="start('release_withheld')"
 				/>
+				<Button v-if="run.salary_slips_created" icon-left="lucide-landmark" label="Payout list" @click="payoutsOpen = true" />
 				<Dropdown v-if="run.docstatus === 1 && can('Payroll Entry').cancel" :options="moreOptions" align="end">
 					<Button icon="lucide-ellipsis" aria-label="More payroll actions" :disabled="busy" />
 				</Dropdown>
@@ -43,6 +45,10 @@
 		<p v-else-if="run.status === 'Failed' && run.error_message" class="rounded-4 bg-ch-red-bg px-3 py-2 text-ch-red-ink">
 			{{ stripHtml(run.error_message) }}
 		</p>
+		<p v-else-if="request?.status === 'Pending Approval' && !request.can_decide" class="text-ch-amber-ink">
+			Waiting for Accounts to approve the payment request. The bank entry is made after that.
+		</p>
+		<PaymentRequestLine v-if="request" :request="request" @changed="emit('changed', run)" />
 		<p v-if="run.payouts.length" class="flex flex-wrap items-center gap-2 text-ch-ink-3">
 			Payment (bank entries):
 			<a v-for="je in run.payouts" :key="je.name" :href="`/desk/journal-entry/${encodeURIComponent(je.name)}`" target="_blank" class="text-ch-ink hover:underline">
@@ -63,6 +69,8 @@
 			</div>
 		</template>
 	</Dialog>
+
+	<PayoutListDialog :payroll-entry="payoutsOpen ? run.name : null" @close="payoutsOpen = false" />
 </template>
 
 <script setup lang="ts">
@@ -72,15 +80,19 @@ import LinkField from "@/components/fields/LinkField.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { stripHtml } from "@/data/api"
 import { can } from "@/data/permissions"
-import { STEPS, paymentStatus, runPayrollStep, stages, type PayrollRun, type StepKey } from "@/data/payrollRun"
+import { REQUEST_TONES } from "@/data/payrollDashboard"
+import { STEPS, runPayrollStep, stages, type PayrollRun, type StepKey } from "@/data/payrollRun"
 import { formatNumber } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
+import PaymentRequestLine from "./PaymentRequestLine.vue"
+import PayoutListDialog from "./PayoutListDialog.vue"
 
 const props = defineProps<{ run: PayrollRun }>()
 const emit = defineEmits<{ changed: [run: PayrollRun] }>()
 
 const busy = ref(false)
-const payment = computed(() => paymentStatus(props.run))
+const request = computed(() => props.run.payment_request)
+const payoutsOpen = ref(false)
 const pending = ref<StepKey | null>(null)
 const accountOpen = ref(false)
 const account = ref<string | null>(null)

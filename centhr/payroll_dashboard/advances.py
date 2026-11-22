@@ -64,7 +64,7 @@ def get_pending_advances(scope: Scope) -> list:
 def get_cycle_deductions(scope: Scope) -> list:
 	if not frappe.has_permission("Additional Salary", "read"):
 		return []
-	return frappe.get_list(
+	deductions = frappe.get_list(
 		"Additional Salary",
 		filters={
 			**scope.company_filter,
@@ -76,6 +76,24 @@ def get_cycle_deductions(scope: Scope) -> list:
 		order_by="employee asc",
 		limit_page_length=0,
 	)
+	add_salary_slips(deductions)
+	return deductions
+
+
+def add_salary_slips(deductions: list) -> None:
+	"""`salary_slip` on each deduction: the slip that took it off the salary, once there is one."""
+	lines = frappe.get_all(
+		"Salary Detail",
+		filters={
+			"parenttype": "Salary Slip",
+			"additional_salary": ["in", [d.name for d in deductions] or [""]],
+			"docstatus": ["<", 2],
+		},
+		fields=["additional_salary", "parent"],
+	)
+	slip_of = {line.additional_salary: line.parent for line in lines}
+	for deduction in deductions:
+		deduction.salary_slip = slip_of.get(deduction.name)
 
 
 def recover_advance(advance: str, salary_component: str, payroll_date: str) -> str:
@@ -164,9 +182,9 @@ ADVANCE_FIELDS = [
 ]
 
 
-def get_advance_details(name: str) -> dict:
+def get_advance_details(name: str, scope: Scope | None = None) -> dict:
 	"""One employee advance for the quick view: its amounts, the expense claims that settled part of
-	it, and the salary deductions scheduled or made for it."""
+	it, the salary deductions scheduled or made for it, and where its recovery stands in the cycle."""
 	doc = frappe.get_doc("Employee Advance", name)
 	doc.check_permission("read")
 	deductions = frappe.get_all(
@@ -175,6 +193,7 @@ def get_advance_details(name: str) -> dict:
 		fields=["name", "salary_component", "amount", "payroll_date", "docstatus"],
 		order_by="payroll_date asc",
 	)
+	add_salary_slips(deductions)
 	claims = frappe.get_all(
 		"Expense Claim Advance",
 		filters={"employee_advance": name, "parenttype": "Expense Claim", "docstatus": ["<", 2]},
@@ -186,4 +205,38 @@ def get_advance_details(name: str) -> dict:
 		"recovery_scheduled": bool(deductions),
 		"deductions": deductions,
 		"claims": claims,
+		"due_status": due_status(doc, scope),
+		"recovery_note": recovery_note(doc, deductions, scope),
 	}
+
+
+def due_status(advance, scope: Scope | None) -> str:
+	"""Where the advance's due date falls against the pay cycle."""
+	if not advance.get("due_date"):
+		return "No due date"
+	due = frappe.utils.getdate(advance.due_date)
+	if not scope:
+		return "Overdue" if due < frappe.utils.getdate() else "Upcoming"
+	if due < scope.from_date:
+		return "Overdue"
+	return "Due this cycle" if due <= scope.to_date else "Upcoming"
+
+
+def recovery_note(advance, deductions: list, scope: Scope | None) -> str:
+	"""Why the advance is, or is not, taken off a salary in the cycle."""
+	from centhr.iou.claim import claims_in_approval
+
+	if outstanding(advance) <= 0:
+		return _("Settled in full; nothing is left to recover.")
+	if deductions:
+		latest = deductions[-1]
+		if latest.salary_slip:
+			return _("Deducted on salary slip {0}.").format(latest.salary_slip)
+		return _("A deduction is scheduled for {0}.").format(frappe.format(latest.payroll_date, "Date"))
+	if not advance.repay_unclaimed_amount_from_salary:
+		return _("Not recovered through payroll: Repay Unclaimed Amount from Salary is not ticked.")
+	if claims_in_approval([advance.name]):
+		return _("An expense claim against it is still in approval, so payroll leaves it alone.")
+	if scope and not is_due(advance, scope.to_date):
+		return _("Not due in this cycle yet.")
+	return _("Due and not scheduled yet. Use Recover in payroll, or it is scheduled when payroll is generated.")

@@ -9,11 +9,14 @@ from frappe.utils import add_days, getdate, today
 from centhr.payroll_dashboard.scope import Scope
 
 COUNTED = ("present", "work_from_home", "half_day", "paid_leave", "unpaid_leave", "absent")
+# Days without attendance that a request covers; they wait for an approver, not for the employee
+PENDING = ("pending_leave", "pending_request")
 
 
 class AttendanceSummary:
 	"""Working days are the cycle's days without holidays, within the employee's joining and leaving dates.
-	Days still to come are not counted as unmarked."""
+	Days still to come are not counted as unmarked, and neither are days in a leave application or an
+	attendance request that still waits for approval."""
 
 	def __init__(self, scope: Scope):
 		self.scope = scope
@@ -23,10 +26,14 @@ class AttendanceSummary:
 
 	def summarize(self, employees: list) -> dict[str, dict]:
 		"""Per employee name; `employees` rows need name, date_of_joining and relieving_date."""
-		marks = self.get_marks([e.name for e in employees])
-		return {e.name: self.summarize_one(e, marks.get(e.name, {})) for e in employees}
+		names = [e.name for e in employees]
+		marks = self.get_marks(names)
+		pending = self.get_pending(names)
+		return {
+			e.name: self.summarize_one(e, marks.get(e.name, {}), pending.get(e.name, {})) for e in employees
+		}
 
-	def summarize_one(self, employee, marks: dict) -> dict:
+	def summarize_one(self, employee, marks: dict, pending: dict) -> dict:
 		holidays = self.get_holidays(employee.name)
 		start = max(self.scope.from_date, getdate(employee.date_of_joining or self.scope.from_date))
 		end = min(self.scope.to_date, getdate(employee.relieving_date or self.scope.to_date))
@@ -37,13 +44,21 @@ class AttendanceSummary:
 			kind = marks.get(day)
 			if kind:
 				counts[kind] += 1
-		marked_until_today = sum(1 for d in working if d <= self.until and d in marks)
-		due = sum(1 for d in working if d <= self.until)
+		waiting = dict.fromkeys(PENDING, 0)
+		unmarked = 0
+		for day in working:
+			if day > self.until or day in marks:
+				continue
+			if day in pending:
+				waiting[pending[day]] += 1
+			else:
+				unmarked += 1
 		paid_days = counts["present"] + counts["work_from_home"] + counts["paid_leave"] + counts["half_day"] * 0.5
 		return {
 			**counts,
+			**waiting,
 			"working_days": len(working),
-			"unmarked": due - marked_until_today,
+			"unmarked": unmarked,
 			"holidays": len([d for d in days_between(start, end) if d in holidays]),
 			"paid_days": paid_days,
 		}
@@ -65,6 +80,32 @@ class AttendanceSummary:
 		for row in rows:
 			marks[row.employee][getdate(row.attendance_date)] = self.kind(row)
 		return marks
+
+	def get_pending(self, employees: list[str]) -> dict[str, dict]:
+		"""Each employee's days in an open leave application or a draft attendance request, as
+		{date: kind}. A day in both counts as leave."""
+		pending: dict[str, dict] = defaultdict(dict)
+		if not employees:
+			return pending
+		for kind, doctype, extra in (
+			("pending_request", "Attendance Request", {}),
+			("pending_leave", "Leave Application", {"status": "Open"}),
+		):
+			rows = frappe.get_all(
+				doctype,
+				filters={
+					"employee": ["in", employees],
+					"docstatus": 0,
+					"from_date": ["<=", self.scope.to_date],
+					"to_date": [">=", self.scope.from_date],
+					**extra,
+				},
+				fields=["employee", "from_date", "to_date"],
+			)
+			for row in rows:
+				start, end = max(row.from_date, self.scope.from_date), min(row.to_date, self.scope.to_date)
+				pending[row.employee].update(dict.fromkeys(days_between(start, end), kind))
+		return pending
 
 	def kind(self, row) -> str:
 		if row.status == "On Leave":

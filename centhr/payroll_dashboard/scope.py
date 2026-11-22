@@ -6,6 +6,8 @@ from datetime import date
 import frappe
 from frappe.utils import add_days, add_months, getdate
 
+from centhr.api.salary_overview import SalaryOverview
+
 SLIP_FIELDS = [
 	"name",
 	"employee",
@@ -24,6 +26,9 @@ SLIP_FIELDS = [
 	"gross_pay",
 	"total_deduction",
 	"net_pay",
+	"mode_of_payment",
+	"bank_name",
+	"bank_account_no",
 ]
 
 
@@ -49,6 +54,10 @@ class Scope:
 			getdate(add_months(self.from_date, -months)),
 			getdate(add_days(add_months(self.from_date, -months + 1), -1)),
 		)
+
+	def get_employees(self) -> list[dict]:
+		"""The cycle's employees the user may see, each with their salary structure and salary slip."""
+		return SalaryOverview(self.company, self.from_date, self.to_date).get_rows()
 
 	def get_slips(self, fields: list[str] | None = None) -> list:
 		"""Salary slips of the cycle the user may read; cancelled slips are left out."""

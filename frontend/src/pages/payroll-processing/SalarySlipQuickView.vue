@@ -20,7 +20,10 @@
 					<h3 class="border-b border-ch-line px-3 py-2 font-medium text-ch-ink">{{ part.title }}</h3>
 					<dl class="px-3 py-1">
 						<div v-for="line in part.lines" :key="line.salary_component" class="flex justify-between gap-3 py-1">
-							<dt class="truncate text-ch-ink-2">{{ line.salary_component }}</dt>
+							<dt class="flex min-w-0 items-center gap-1.5 text-ch-ink-2">
+								<span class="truncate">{{ line.salary_component }}</span>
+								<StatusBadge v-if="line.salary_component === slip.iou_component" pill tone="amber" status="Advance recovery" />
+							</dt>
 							<dd class="tabular-nums text-ch-ink">{{ money(line.amount) }}</dd>
 						</div>
 						<p v-if="!part.lines.length" class="py-2 text-ch-ink-3">None</p>
@@ -45,7 +48,7 @@
 
 		<template #actions>
 			<div class="flex flex-wrap justify-end gap-2">
-				<template v-if="slip?.docstatus === 0">
+				<template v-if="slip?.docstatus === 0 && !readonly">
 					<Button theme="red" icon-left="lucide-trash-2" label="Delete" @click="$emit('action', 'delete', slip.name)" />
 					<Button icon-left="lucide-refresh-cw" label="Recalculate" @click="$emit('action', 'recalculate', slip.name)" />
 				</template>
@@ -64,7 +67,7 @@ import { formatCurrency, formatDateShort, formatNumber } from "@/utils/format"
 import { routeFor } from "@/utils/routes"
 
 /** A salary slip at a glance, without leaving the dashboard: days, earnings, deductions and net pay. */
-const props = defineProps<{ name: string | null }>()
+const props = defineProps<{ name: string | null; /** Without the actions that change a draft slip. */ readonly?: boolean }>()
 defineEmits<{ close: []; action: [action: "recalculate" | "delete", name: string] }>()
 
 const slip = ref<SlipDetails | null>(null)

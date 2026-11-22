@@ -27,7 +27,8 @@
 						</Dropdown>
 					</div>
 				</div>
-				<PayrollRunCard v-for="run in data?.runs || []" :key="run.name" :run="run" @changed="refresh" />
+				<SegmentedTabs v-if="runStatuses.length > 2" v-model="runStatus" :tabs="runStatuses" />
+				<PayrollRunCard v-for="run in shownRuns" :key="run.name" :run="run" @changed="refresh" />
 			</div>
 		</CollapsibleSection>
 
@@ -49,6 +50,8 @@
 	<FilterBar v-model:search="search" :total="filtered.length" :active="hasFilters" search-placeholder="Search name or ID" noun="salary slip" @clear="clear">
 		<FilterLink v-model="department" doctype="Department" placeholder="Department" :filters="scope.company ? { company: scope.company } : undefined" />
 		<FilterSelect v-if="reconciled?.rows?.length" v-model="excelStatus" :options="EXCEL_STATUSES" placeholder="Excel" />
+		<Button :variant="bankDetails ? 'subtle' : 'outline'" icon-left="lucide-landmark" label="Bank details" :aria-pressed="bankDetails" @click="bankDetails = !bankDetails" />
+		<Button v-if="negativeDrafts" theme="red" icon-left="lucide-trash-2" :label="`Delete ${negativeDrafts} negative drafts`" :loading="bulk === 'negative'" @click="confirmDeleteNegative" />
 		<Button icon-left="lucide-scale" label="Reconcile with Excel" @click="reconcileOpen = true" />
 		<Button icon-left="lucide-file-spreadsheet" label="Export (Excel)" :disabled="!filtered.length" :loading="exporting" @click="exportRows" />
 	</FilterBar>
@@ -125,7 +128,7 @@ import SalarySlipQuickView from "../SalarySlipQuickView.vue"
 import EmployeeCell from "./EmployeeCell.vue"
 import { cycleLabel } from "@/data/payroll"
 import { getReconciliation } from "@/data/masterSheet"
-import { change, exportSlips, getProcessing, updateSlips, useTabData, type Scope, type Totals } from "@/data/payrollDashboard"
+import { change, deleteNegativeSlips, exportSlips, getProcessing, updateSlips, useTabData, type BulkResult, type Scope, type Totals } from "@/data/payrollDashboard"
 import { generatePayroll, type PayrollBatch } from "@/data/payrollRun"
 import { can } from "@/data/permissions"
 import type { SalaryRow } from "@/data/salaryOverview"
@@ -136,7 +139,8 @@ const props = defineProps<{ scope: Scope; employees: SalaryRow[] }>()
 const emit = defineEmits<{ changed: [] }>()
 const { data, loading, error, reload } = useTabData(props.scope, getProcessing)
 
-const STATUSES = ["All", "Draft", "Submitted", "Withheld"]
+// Failed is not a slip status: it lists the slips of payroll entries that failed
+const STATUSES = ["All", "Draft", "Submitted", "Withheld", "Failed"]
 const EMPTY: Totals = { headcount: 0, gross_pay: 0, total_deduction: 0, net_pay: 0 }
 const POLL_MS = 3000
 
@@ -156,27 +160,60 @@ const currency = computed(() => data.value?.slips[0]?.currency)
 const money = (v: number) => formatCurrency(v, currency.value)
 const canGenerate = computed(() => can("Payroll Entry").create && can("Payroll Entry").submit)
 const leftInCycle = (r: SalaryRow) => !!r.relieving_date && r.relieving_date >= props.scope.from && r.relieving_date <= props.scope.to
-const eligible = computed(() => props.employees.filter((r) => r.status === "Active" && r.assignment && !r.salary_slip && !leftInCycle(r)).length)
+/** Confidential salary structure -> its batch, for the batches this user may run. */
+const confidential = computed(() => data.value?.confidential_batches || {})
+/** The batch that pays an employee: their structure's confidential batch, else Exited or Regular. */
+const batchOf = (r: SalaryRow): PayrollBatch => (r.salary_structure && confidential.value[r.salary_structure]) || (leftInCycle(r) ? "Exited" : "Regular")
+/** Employees with a salary structure who wait for a slip, per batch. */
+const waiting = computed(() => {
+	const counts: Record<PayrollBatch, number> = {}
+	for (const r of props.employees) {
+		const due = r.assignment && !r.salary_slip && (r.status === "Active" || leftInCycle(r))
+		if (due) counts[batchOf(r)] = (counts[batchOf(r)] || 0) + 1
+	}
+	return counts
+})
+const eligible = computed(() => waiting.value.Regular || 0)
+// Employees who left in the cycle are paid in their own batch
+const exited = computed(() => waiting.value.Exited || 0)
 /** Each batch is generated once per company and cycle. */
 const hasRun = (batch: PayrollBatch) => (data.value?.runs || []).some((r) => r.company === props.scope.company && r.batch === batch)
-// Employees who left in the cycle are paid in their own batch
-const exited = computed(() => props.employees.filter((r) => leftInCycle(r) && r.assignment && !r.salary_slip).length)
-const generateOptions = computed(() => [
-	{
-		label: "Regular payroll",
-		description: hasRun("Regular") ? "Generated for this cycle" : `${eligible.value} employees waiting`,
-		icon: "lucide-users",
-		disabled: !eligible.value || hasRun("Regular"),
-		onClick: () => confirmGenerate("Regular"),
-	},
-	{
-		label: "Exited employees",
-		description: hasRun("Exited") ? "Generated for this cycle" : `${exited.value} left in this cycle`,
-		icon: "lucide-user-minus",
-		disabled: !exited.value || hasRun("Exited"),
-		onClick: () => confirmGenerate("Exited"),
-	},
-])
+const BATCH_NOTES: Record<string, { label: string; icon: string; waiting: string }> = {
+	Regular: { label: "Regular payroll", icon: "lucide-users", waiting: "employees waiting" },
+	Exited: { label: "Exited employees", icon: "lucide-user-minus", waiting: "left in this cycle" },
+}
+const generateOptions = computed(() =>
+	["Regular", "Exited", ...new Set(Object.values(confidential.value))].map((batch) => {
+		const note = BATCH_NOTES[batch] || { label: `${batch} batch`, icon: "lucide-lock", waiting: "employees waiting" }
+		const count = waiting.value[batch] || 0
+		return {
+			label: note.label,
+			description: hasRun(batch) ? "Generated for this cycle" : `${count} ${note.waiting}`,
+			icon: note.icon,
+			disabled: !count || hasRun(batch),
+			onClick: () => confirmGenerate(batch),
+		}
+	})
+)
+
+// Entries by their status, once there is more than one kind
+const runStatus = ref("All")
+const runStatuses = computed(() => {
+	const runs = data.value?.runs || []
+	return [
+		{ label: "All", value: "All", count: runs.length },
+		...[...new Set(runs.map((r) => r.status))].map((s) => ({ label: s, value: s, count: runs.filter((r) => r.status === s).length })),
+	]
+})
+const shownRuns = computed(() => (data.value?.runs || []).filter((r) => runStatus.value === "All" || r.status === runStatus.value))
+const failedEntries = computed(() => new Set((data.value?.runs || []).filter((r) => r.status === "Failed").map((r) => r.name)))
+const matchesStatus = (slip: { status: string; payroll_entry: string | null }, wanted: string) =>
+	wanted === "All" || (wanted === "Failed" ? !!slip.payroll_entry && failedEntries.value.has(slip.payroll_entry) : slip.status === wanted)
+
+// Bank name, account and mode of payment in place of the day columns
+const bankDetails = ref(false)
+const negativeDrafts = computed(() => (data.value?.slips || []).filter((s) => s.docstatus === 0 && s.net_pay < 0).length)
+const hasAdvanceDeductions = computed(() => (data.value?.slips || []).some((s) => s.iou_deduction))
 
 // Opened from a row; the full slip is one click further
 const quickView = ref<string | null>(null)
@@ -203,12 +240,12 @@ const runsSummary = computed(() => {
 
 const statusCounts = computed(() => {
 	const slips = data.value?.slips || []
-	return Object.fromEntries(STATUSES.map((s) => [s, s === "All" ? slips.length : slips.filter((x) => x.status === s).length]))
+	return Object.fromEntries(STATUSES.map((s) => [s, slips.filter((x) => matchesStatus(x, s)).length]))
 })
 const filtered = computed(() => {
 	const term = search.value.trim().toLowerCase()
 	return (data.value?.slips || [])
-		.filter((s) => status.value === "All" || s.status === status.value)
+		.filter((s) => matchesStatus(s, status.value))
 		.filter((s) => !term || s.employee.toLowerCase().includes(term) || s.employee_name.toLowerCase().includes(term))
 		.filter((s) => !department.value || s.department === department.value)
 		.filter((s) => !excelStatus.value || excel.value[s.employee] === excelStatus.value)
@@ -239,10 +276,10 @@ function clear() {
 }
 
 function confirmGenerate(batch: PayrollBatch) {
-	const count = batch === "Exited" ? exited.value : eligible.value
-	const who = batch === "Exited" ? "employees who left in this cycle" : "employees"
+	const count = waiting.value[batch] || 0
+	const who = batch === "Exited" ? "employees who left in this cycle" : batch === "Regular" ? "employees" : `employees of the ${batch} batch`
 	dialog.confirm({
-		title: batch === "Exited" ? "Generate payroll for exited employees" : "Generate regular payroll",
+		title: batch === "Exited" ? "Generate payroll for exited employees" : batch === "Regular" ? "Generate regular payroll" : `Generate ${batch} payroll`,
 		message: `Create the payroll for ${props.scope.company}, ${cycleLabel(props.scope.from, props.scope.to)}? A payroll entry is submitted and draft salary slips are created for ${count} ${who}. Review the Pre-Check Audit first.`,
 		confirmLabel: "Generate",
 		onConfirm: async () => {
@@ -281,10 +318,25 @@ function runBulk(action: "submit" | "recalculate" | "delete") {
 	})
 }
 
-async function apply(action: "submit" | "recalculate" | "delete", names: string[]) {
+function apply(action: "submit" | "recalculate" | "delete", names: string[]) {
+	return report(action, () => updateSlips(action, names))
+}
+
+function confirmDeleteNegative() {
+	dialog.confirm({
+		title: "Delete negative draft slips",
+		message: `Delete the ${negativeDrafts.value} draft salary slips of this cycle whose net pay is below zero? Correct their cause, then generate them again. Submitted slips and slips of exactly zero are kept.`,
+		confirmLabel: "Delete",
+		theme: "red",
+		onConfirm: () => report("negative", () => deleteNegativeSlips(props.scope)),
+	})
+}
+
+/** Runs a bulk action on slips and says how many were done and why any were skipped. */
+async function report(action: string, run: () => Promise<BulkResult>) {
 	bulk.value = action
 	try {
-		const result = await updateSlips(action, names)
+		const result = await run()
 		if (result.done.length) toast.success(`${result.done.length} salary slips done`)
 		if (result.failed.length) toast.warning(`${result.failed.length} skipped: ${result.failed[0].error}`)
 		await refresh()
@@ -305,17 +357,19 @@ async function exportRows() {
 }
 
 const days = (label: string, key: string): Column => ({ key, label, width: "72px", align: "right", format: (v) => formatNumber(v) })
+const text = (label: string, key: string): Column => ({ key, label, width: "minmax(110px,1fr)", format: (v) => v || "—" })
 const amount = (label: string, key: string): Column => ({ key, label, width: "minmax(110px,1fr)", align: "right", format: (v, r) => formatCurrency(v, r.currency) })
 const columns = computed<Column[]>(() => [
 	{ key: "employee", label: "Employee", width: "minmax(200px,1.8fr)" },
 	{ key: "status", label: "Status", width: "100px" },
 	...(reconciled.value?.rows?.length ? [{ key: "excel", label: "Excel", width: "140px" } as Column] : []),
-	days("Work days", "total_working_days"),
-	days("Absent", "absent_days"),
-	days("LWP", "leave_without_pay"),
-	days("Pay days", "payment_days"),
+	...(bankDetails.value
+		? [text("Paid by", "mode_of_payment"), text("Bank", "bank_name"), text("Account number", "bank_account_no")]
+		: [days("Work days", "total_working_days"), days("Absent", "absent_days"), days("LWP", "leave_without_pay"), days("Pay days", "payment_days")]),
 	amount("Gross", "gross_pay"),
 	amount("Deductions", "total_deduction"),
+	// Advance recovery is part of the deductions; shown apart, as it is not a cost of the salary
+	...(hasAdvanceDeductions.value ? [amount("IOU deduction", "iou_deduction")] : []),
 	{ key: "net_pay", label: "Net pay", width: "minmax(120px,1fr)", align: "right" },
 	{ key: "actions", label: "", width: "84px", align: "right" },
 ])

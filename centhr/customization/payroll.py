@@ -32,13 +32,13 @@ CUSTOM_FIELDS = {
 	"Payroll Entry": [
 		{
 			"fieldname": "centhr_batch",
-			"fieldtype": "Select",
+			# A company's confidential batches have their own names (Payroll Structure Rule)
+			"fieldtype": "Data",
 			"label": "Payroll Batch",
-			"options": "Regular\nExited",
 			"default": "Regular",
 			"insert_after": "payroll_frequency",
 			"read_only": 1,
-			"description": "Exited: only employees whose relieving date is in the pay cycle.",
+			"description": "Regular, Exited (employees whose relieving date is in the pay cycle), or a confidential batch.",
 		},
 	],
 	"Employee": [
@@ -56,10 +56,20 @@ CUSTOM_FIELDS = {
 def create_custom_fields():
 	for doctype, fields in CUSTOM_FIELDS.items():
 		for field in fields:
-			if not frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}):
+			existing = frappe.db.get_value(
+				"Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}, ["name", "fieldtype"]
+			)
+			if not existing:
 				create_custom_field(doctype, field)
-				frappe.db.commit()
-				frappe.clear_cache(doctype=doctype)
+			elif existing[1] != field["fieldtype"]:
+				# A field whose type changed since it was installed, such as the batch (once a Select)
+				custom_field = frappe.get_doc("Custom Field", existing[0])
+				custom_field.update({"options": None, **field})
+				custom_field.save()
+			else:
+				continue
+			frappe.db.commit()
+			frappe.clear_cache(doctype=doctype)
 	# The form asks for Reports To unless No Line Manager is ticked
 	make_property_setter(
 		"Employee",

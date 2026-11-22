@@ -1,0 +1,8 @@
+<p>{{ _("Hello {0},").format(recipient_name) }}</p>
+<p>{{ intro }}</p>
+<ul>
+{% for item in items %}
+	<li>{{ item }}</li>
+{% endfor %}
+</ul>
+<p>{{ _("Payroll for {0} to {1} waits for this.").format(from_date, to_date) }}</p>

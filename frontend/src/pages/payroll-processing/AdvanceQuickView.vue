@@ -4,6 +4,7 @@
 			<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-ch-ink-3">
 				<span class="tabular-nums">{{ advance.name }}</span>
 				<StatusBadge pill doctype="Employee Advance" :status="advance.status" />
+				<StatusBadge pill :tone="DUE_TONES[advance.due_status]" :status="advance.due_status" />
 				<span>{{ [advance.employee, advance.department].filter(Boolean).join(" · ") }}</span>
 				<span class="ml-auto">{{ advance.company }}</span>
 			</div>
@@ -30,12 +31,22 @@
 					<h3 class="border-b border-ch-line px-3 py-2 font-medium text-ch-ink">Settled so far</h3>
 					<dl class="px-3 py-1">
 						<div v-for="claim in advance.claims" :key="claim.parent" class="flex justify-between gap-3 py-1">
-							<dt class="truncate text-ch-ink-2">Expense claim {{ claim.parent }}{{ claim.docstatus ? "" : " (draft)" }}</dt>
+							<dt class="truncate text-ch-ink-2">
+								Expense claim
+								<a :href="`/desk/expense-claim/${encodeURIComponent(claim.parent)}`" target="_blank" class="text-ch-primary hover:underline">{{ claim.parent }}</a>
+								{{ claim.docstatus ? "" : " (draft)" }}
+							</dt>
 							<dd class="tabular-nums text-ch-ink">{{ money(claim.allocated_amount) }}</dd>
 						</div>
 						<div v-for="deduction in advance.deductions" :key="deduction.name" class="flex justify-between gap-3 py-1">
 							<dt class="truncate text-ch-ink-2">
-								Salary deduction {{ formatDateShort(deduction.payroll_date) }}{{ deduction.docstatus ? "" : " (draft)" }}
+								<a :href="`/desk/additional-salary/${encodeURIComponent(deduction.name)}`" target="_blank" class="text-ch-primary hover:underline">Salary deduction</a>
+								{{ formatDateShort(deduction.payroll_date) }}{{ deduction.docstatus ? "" : " (draft)" }}
+								<template v-if="deduction.salary_slip">
+									· on slip
+									<RouterLink :to="routeFor('Salary Slip', deduction.salary_slip)!" class="text-ch-primary hover:underline">{{ deduction.salary_slip }}</RouterLink>
+								</template>
+								<template v-else>· not on a salary slip yet</template>
 							</dt>
 							<dd class="tabular-nums text-ch-ink">{{ money(deduction.amount) }}</dd>
 						</div>
@@ -46,8 +57,8 @@
 				</section>
 			</div>
 
-			<p v-if="advance.recovery_scheduled" class="rounded-4 bg-ch-blue-bg px-3 py-2 text-ch-blue-ink">
-				A salary deduction is scheduled for this advance.
+			<p class="rounded-4 px-3 py-2" :class="advance.recovery_scheduled ? 'bg-ch-blue-bg text-ch-blue-ink' : 'bg-ch-subtle text-ch-ink-2'">
+				{{ advance.recovery_note }}
 			</p>
 		</div>
 		<div v-else class="flex justify-center py-10"><LoadingIndicator class="size-5 text-ch-ink-3" /></div>
@@ -71,12 +82,16 @@
 import { computed, ref, watch } from "vue"
 import { Button, Dialog, LoadingIndicator } from "frappe-ui"
 import StatusBadge from "@/components/StatusBadge.vue"
-import { getAdvanceDetails, type AdvanceDetails } from "@/data/payrollDashboard"
+import { getAdvanceDetails, type AdvanceDetails, type Scope } from "@/data/payrollDashboard"
 import { formatCurrency, formatDateShort, today } from "@/utils/format"
+import { routeFor } from "@/utils/routes"
+import type { Tone } from "@/utils/status"
+
+const DUE_TONES: Record<AdvanceDetails["due_status"], Tone> = { Overdue: "red", "Due this cycle": "amber", Upcoming: "blue", "No due date": "gray" }
 
 /** An employee advance at a glance, without leaving the dashboard: what was paid, what is settled
  * and what is still to recover. */
-const props = defineProps<{ name: string | null }>()
+const props = defineProps<{ name: string | null; /** The pay cycle its recovery is judged against. */ scope?: Scope }>()
 defineEmits<{ close: []; recover: [advance: AdvanceDetails] }>()
 
 const advance = ref<AdvanceDetails | null>(null)
@@ -84,7 +99,7 @@ watch(
 	() => props.name,
 	async (name) => {
 		advance.value = null
-		if (name) advance.value = await getAdvanceDetails(name)
+		if (name) advance.value = await getAdvanceDetails(name, props.scope)
 	},
 	{ immediate: true }
 )

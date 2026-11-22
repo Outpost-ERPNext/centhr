@@ -1,10 +1,11 @@
 import { api } from "@/data/api"
+import type { PaymentRequest } from "@/data/payrollDashboard"
 
 /** A Payroll Entry and the step it waits for, from centhr.api.payroll. */
 export interface PayrollRun {
 	name: string
 	company: string
-	/** Regular, or Exited for employees who left in the cycle. */
+	/** Regular, Exited for employees who left in the cycle, or a confidential batch of the company. */
 	batch: PayrollBatch
 	status: string
 	docstatus: number
@@ -14,13 +15,15 @@ export interface PayrollRun {
 	payment_account: string | null
 	error_message: string | null
 	payouts: { name: string; docstatus: number }[]
+	/** The newest payment request of the run, whatever its state. */
+	payment_request: PaymentRequest | null
 	has_withheld_salaries: boolean
 	next_step: StepKey | null
 }
 
-export type PayrollBatch = "Regular" | "Exited"
+export type PayrollBatch = string
 
-export type StepKey = "submit" | "create_slips" | "submit_slips" | "bank_entry" | "release_withheld" | "cancel"
+export type StepKey = "submit" | "create_slips" | "submit_slips" | "payment_request" | "bank_entry" | "release_withheld" | "cancel"
 
 interface Step {
 	label: string
@@ -47,10 +50,16 @@ export const STEPS: Record<StepKey, Step> = {
 		icon: "lucide-send",
 		confirm: "Submit all draft salary slips? This books the payroll accrual and the slips can no longer be edited.",
 	},
-	bank_entry: {
+	payment_request: {
 		label: "Request payment",
+		icon: "lucide-file-check",
+		confirm: "Request payment of these salaries? A Payment Request Form goes to Accounts for approval. The bank entry is made once it is approved.",
+		needsAccount: true,
+	},
+	bank_entry: {
+		label: "Make bank entry",
 		icon: "lucide-landmark",
-		confirm: "Request payment of these salaries? A draft bank entry is created for Finance to review and submit in Accounts.",
+		confirm: "Make the bank entry of the approved payment request? It is a draft for Accounts to review and submit.",
 		needsAccount: true,
 	},
 	release_withheld: {
@@ -67,21 +76,16 @@ export const STEPS: Record<StepKey, Step> = {
 	},
 }
 
-/** The three stages shown on a run, in order. */
+/** The stages shown on a run, in order. */
 export function stages(run: PayrollRun) {
+	const request = run.payment_request?.status
 	return [
 		{ label: "Salary slips created", done: !!run.salary_slips_created },
 		{ label: "Salary slips submitted", done: !!run.salary_slips_submitted },
-		{ label: "Payment requested", done: run.payouts.length > 0 },
+		{ label: "Payment requested", done: !!request && request !== "Rejected" },
+		{ label: "Payment approved", done: request === "Approved" || request === "Paid" },
+		{ label: "Bank entry made", done: run.payouts.length > 0 },
 	]
-}
-
-/** Where the payment of a run stands, once it was requested: the bank entry is a draft until Finance submits it. */
-export function paymentStatus(run: PayrollRun): { label: string; tone: "amber" | "green" } | null {
-	if (!run.payouts.length) return null
-	return run.payouts.every((entry) => entry.docstatus === 1)
-		? { label: "Paid", tone: "green" }
-		: { label: "Payment requested", tone: "amber" }
 }
 
 /** Without a company, every company's runs in the period. */

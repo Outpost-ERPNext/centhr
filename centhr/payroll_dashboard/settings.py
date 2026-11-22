@@ -9,6 +9,13 @@ from frappe.utils import add_days, add_months, cint, getdate, today
 MAX_START_DAY = 28
 YEARS_SHOWN = 6
 MANAGER_ROLES = {"HR Manager", "System Manager"}
+# HRMS's Payroll Settings that decide how every company's salary slips are worked out and booked
+SITE_SETTINGS = (
+	"payroll_based_on",
+	"include_holidays_in_total_working_days",
+	"consider_unmarked_attendance_as",
+	"process_payroll_accounting_entry_based_on_employee",
+)
 
 
 def get_settings(company: str) -> dict:
@@ -22,10 +29,26 @@ def get_settings(company: str) -> dict:
 		"auto_recover_advances": cint(auto_recover),
 		"recovery_component": frappe.db.get_single_value("CentHr Settings", "iou_salary_component"),
 		"can_edit": bool(MANAGER_ROLES.intersection(frappe.get_roles())),
+		# CentHR runs monthly pay cycles only
+		"frequency": "Monthly",
+		"site": get_site_settings(),
 	}
 
 
-def save_settings(company: str, start_day: int, auto_recover_advances: bool) -> dict:
+def get_site_settings() -> dict:
+	"""The calculation rules of HRMS's Payroll Settings; they apply to every company of the site."""
+	settings = frappe.get_cached_doc("Payroll Settings")
+	return {field: settings.get(field) for field in SITE_SETTINGS}
+
+
+def save_site_settings(values: dict) -> None:
+	"""Saved through the document, so HRMS checks the values and the user's right to change them."""
+	settings = frappe.get_doc("Payroll Settings")
+	settings.update({field: values[field] for field in SITE_SETTINGS if field in values})
+	settings.save()
+
+
+def save_settings(company: str, start_day: int, auto_recover_advances: bool, site: dict | None = None) -> dict:
 	frappe.only_for(list(MANAGER_ROLES))
 	frappe.has_permission("Company", "read", doc=company, throw=True)
 	start_day = cint(start_day) or 1
@@ -42,6 +65,8 @@ def save_settings(company: str, start_day: int, auto_recover_advances: bool) -> 
 		company,
 		{"payroll_cycle_start_day": start_day, "auto_recover_advances": cint(auto_recover_advances)},
 	)
+	if site:
+		save_site_settings(site)
 	return get_settings(company)
 
 
