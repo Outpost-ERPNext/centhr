@@ -7,6 +7,7 @@
 		:subtitle="page.isNew ? '' : `${page.doc.value.quarter} ${page.doc.value.fiscal_year}`"
 		:read-only-fields="closed ? ['pms_questionnaire_list'] : []"
 		:link-filters="linkFilters"
+		@change="onChange"
 	>
 		<template #actions>
 			<DocActions :page="page">
@@ -35,6 +36,7 @@ import DocActions from "@/components/DocActions.vue"
 import DocPageShell from "@/components/DocPageShell.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
 import { closeQuestionnaires, reopenQuestionnaire } from "@/data/pmsReview"
+import { useEmployeeDetails } from "@/data/employeeDetails"
 import { useDocPage } from "@/data/useDocPage"
 
 const props = defineProps<{ name: string | null }>()
@@ -42,7 +44,7 @@ const page = useDocPage("PMS Questionnaire", props.name)
 
 const closed = computed(() => page.doc.value.status === "Completed")
 const busy = ref(false)
-const linkFilters = { employee: () => ({ status: "Active" }) }
+const { linkFilters, onChange } = useEmployeeDetails(page.doc, { employee_name: "employee_name", department: "department" })
 
 function confirmClose() {
 	dialog.confirm({

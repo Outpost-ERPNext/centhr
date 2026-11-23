@@ -8,7 +8,8 @@
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				<LinkField v-model="form.fiscal_year" doctype="Fiscal Year" label="Fiscal year" required size="md" />
 				<FormControl v-model="form.month" type="select" label="Month" :options="MONTH_OPTIONS" required />
-				<LinkField v-model="form.department" doctype="Department" label="Department" :filters="{ is_group: 0 }" required size="md" />
+				<LinkField v-model="form.company" doctype="Company" label="Company" size="md" />
+				<LinkField v-model="form.department" doctype="Department" label="Department" :filters="departmentFilters" required size="md" />
 				<LinkField v-model="form.designation" doctype="Designation" label="Designation" :filters="{ disabled: 0 }" size="md" />
 			</div>
 			<ChildTable v-if="metaReady" v-model="form.items" :field="ITEMS_FIELD" required />
@@ -43,6 +44,8 @@ const ITEMS_FIELD: DocField = { fieldname: "items", fieldtype: "Table", label: "
 const form = reactive({
 	fiscal_year: null as string | null,
 	month: currentMonth(),
+	// Only narrows the department list; a department belongs to one company
+	company: null as string | null,
 	department: null as string | null,
 	designation: null as string | null,
 	items: [] as Record<string, any>[],
@@ -56,6 +59,12 @@ watch(open, async (value) => {
 	metaReady.value = true
 	form.fiscal_year ||= await getCurrentFiscalYear()
 })
+
+const departmentFilters = computed(() => ({ is_group: 0, ...(form.company ? { company: form.company } : {}) }))
+watch(
+	() => form.company,
+	() => (form.department = null)
+)
 
 const totalWeight = computed(() => form.items.reduce((sum, row) => sum + (Number(row.weight) || 0), 0))
 const complete = (row: Record<string, any>) => row.kpi && row.uom && row.weight && row.target !== undefined && row.target !== null && row.target !== ""

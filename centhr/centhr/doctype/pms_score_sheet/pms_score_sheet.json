@@ -5,12 +5,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "company",
   "employee",
   "employee_name",
   "fiscal_year",
   "quarter",
   "column_break_org",
-  "company",
   "department",
   "pms_questionnaire",
   "status",
@@ -35,6 +35,15 @@
   "amended_from"
  ],
  "fields": [
+  {
+   "description": "Choose the company first to list its employees.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only_depends_on": "eval:doc.employee"
+  },
   {
    "fieldname": "employee",
    "fieldtype": "Link",
@@ -76,14 +85,6 @@
   {
    "fieldname": "column_break_org",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Company",
-   "options": "Company",
-   "read_only": 1
   },
   {
    "fieldname": "department",
@@ -236,7 +237,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-17 14:00:00.000000",
+ "modified": "2026-11-23 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "PMS Score Sheet",

@@ -6,6 +6,7 @@
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="page.isNew ? '' : `${page.doc.value.quarter} ${page.doc.value.fiscal_year}`"
 		:link-filters="linkFilters"
+		@change="onChange"
 	>
 		<template #status>
 			<StatusBadge v-if="!page.isNew" pill :tone="STATUS_TONES[page.doc.value.status] || 'gray'" :status="page.doc.value.status" />
@@ -22,6 +23,7 @@
 <script setup lang="ts">
 import DocPageShell from "@/components/DocPageShell.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import { useEmployeeDetails } from "@/data/employeeDetails"
 import { useDocPage } from "@/data/useDocPage"
 import type { Tone } from "@/utils/status"
 
@@ -29,5 +31,5 @@ const STATUS_TONES: Record<string, Tone> = { Pending: "amber", Approved: "green"
 
 const props = defineProps<{ name: string | null }>()
 const page = useDocPage("PMS Score Sheet", props.name)
-const linkFilters = { employee: () => ({ status: "Active" }) }
+const { linkFilters, onChange } = useEmployeeDetails(page.doc, { employee_name: "employee_name", department: "department" })
 </script>

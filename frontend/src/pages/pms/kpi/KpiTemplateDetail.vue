@@ -6,6 +6,7 @@
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="page.isNew ? '' : period"
 		:link-filters="linkFilters"
+		@change="onChange"
 	>
 		<template v-if="page.isNew" #before-form>
 			<p class="text-[13px] text-ch-ink-3">
@@ -31,6 +32,7 @@
 import { computed, ref } from "vue"
 import DocPageShell from "@/components/DocPageShell.vue"
 import SummaryCard from "@/components/SummaryCard.vue"
+import { getEmployeeName, useEmployeeDetails } from "@/data/employeeDetails"
 import { getList } from "@/data/list"
 import { useDocPage } from "@/data/useDocPage"
 import { formatNumber } from "@/utils/format"
@@ -62,16 +64,10 @@ const resultLabel = computed(() =>
 	result.value?.docstatus === 1 ? `Submitted · ${formatNumber(result.value.overall_score, 2)}` : docstatusLabel(result.value?.docstatus || 0)
 )
 
-const linkFilters = { employee: () => ({ status: "Active" }) }
-
-async function getEmployeeName(employee: string) {
-	const rows = await getList<{ employee_name: string }>({
-		doctype: "Employee",
-		fields: ["employee_name"],
-		filters: [["name", "=", employee]],
-		limit: 1,
-		silent: true,
-	}).catch(() => [])
-	return rows[0]?.employee_name || ""
-}
+const { linkFilters, onChange } = useEmployeeDetails(page.doc, {
+	employee_name: "employee_name",
+	department: "department",
+	designation: "designation",
+	reviewer: "reports_to",
+})
 </script>

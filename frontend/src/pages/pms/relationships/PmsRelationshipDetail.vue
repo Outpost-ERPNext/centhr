@@ -6,6 +6,7 @@
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="page.isNew ? '' : [page.doc.value.department, page.doc.value.grade].filter(Boolean).join(' · ')"
 		:link-filters="linkFilters"
+		@change="onChange"
 	>
 		<template #actions>
 			<DocActions :page="page">
@@ -29,7 +30,8 @@
 		</template>
 		<template v-if="page.isNew" #before-form>
 			<p class="text-[13px] text-ch-ink-3">
-				Choose the employee and up to 2 peers of the same company. The department, grade and line manager come from the Employee record.
+				Choose the company, then the employee and up to 2 peers of the same company. The department, grade and line manager come from
+				the Employee record.
 				Each peer also gets this employee as their peer when they have a free place.
 			</p>
 		</template>
@@ -42,6 +44,7 @@ import { Button, toast } from "frappe-ui"
 import DocActions from "@/components/DocActions.vue"
 import DocPageShell from "@/components/DocPageShell.vue"
 import StatusBadge from "@/components/StatusBadge.vue"
+import { useEmployeeDetails } from "@/data/employeeDetails"
 import { setPeerMappingLock } from "@/data/pms"
 import { useDocPage } from "@/data/useDocPage"
 
@@ -50,7 +53,25 @@ const page = useDocPage("PMS Employee Relationship", props.name)
 
 const locked = computed(() => !!page.doc.value.locked)
 const busy = ref(false)
-const linkFilters = { employee: () => ({ status: "Active" }) }
+const details = useEmployeeDetails(page.doc, {
+	employee_name: "employee_name",
+	department: "department",
+	designation: "designation",
+	grade: "grade",
+	line_manager: "reports_to",
+	line_manager_name: "reports_to.employee_name",
+	line_manager_designation: "reports_to.designation",
+})
+const onChange = details.onChange
+const linkFilters = {
+	...details.linkFilters,
+	// A peer is another active employee of the same company
+	"peers.employee": (doc: Record<string, any>) => [
+		["status", "=", "Active"],
+		...(doc.company ? [["company", "=", doc.company]] : []),
+		...(doc.employee ? [["name", "!=", doc.employee]] : []),
+	],
+}
 
 async function toggleLock() {
 	busy.value = true

@@ -70,6 +70,7 @@
 											:field="field"
 											:read-only="fieldReadOnly(field)"
 											:required="required(field)"
+											:link-filters="tableLinkFilters(field.fieldname)"
 											@update:model-value="(v) => setValue(field.fieldname, v)"
 										/>
 										<FieldControl
@@ -186,6 +187,13 @@ function gridClass(columns: number) {
 	if (columns >= 3) return "grid-cols-1 md:grid-cols-3"
 	if (columns === 2) return "grid-cols-1 md:grid-cols-2"
 	return "grid-cols-1"
+}
+
+/** Filters of a child table's link columns: the `linkFilters` given as "table.column". */
+function tableLinkFilters(table: string) {
+	const prefix = `${table}.`
+	const entries = Object.entries(props.linkFilters || {}).filter(([key]) => key.startsWith(prefix))
+	return entries.length ? Object.fromEntries(entries.map(([key, filters]) => [key.slice(prefix.length), filters(props.doc)])) : undefined
 }
 
 function setValue(fieldname: string, value: any) {

@@ -30,6 +30,7 @@
 									:model-value="row[col.fieldname]"
 									:doc="row"
 									:doctype="childDoctype"
+									:link-filters="linkFilters?.[col.fieldname]"
 									compact
 									@update:model-value="(v) => setCell(index, col.fieldname, v)"
 								/>
@@ -69,6 +70,7 @@
 											:model-value="row[f.fieldname]"
 											:doc="row"
 											:doctype="childDoctype"
+											:link-filters="linkFilters?.[f.fieldname]"
 											@update:model-value="(v) => setCell(index, f.fieldname, v)"
 										/>
 									</template>
@@ -103,6 +105,8 @@ const props = defineProps<{
 	required?: boolean
 	/** The rows are given, for example copied from another document; only their cells can change. */
 	fixedRows?: boolean
+	/** Filters of the link columns, by fieldname. */
+	linkFilters?: Record<string, Record<string, any> | any[] | undefined>
 }>()
 const emit = defineEmits<{ "update:modelValue": [rows: Record<string, any>[]] }>()
 

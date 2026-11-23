@@ -7,10 +7,10 @@
  "field_order": [
   "fiscal_year",
   "month",
-  "employee",
-  "employee_name",
-  "column_break_employee",
   "company",
+  "employee",
+  "column_break_employee",
+  "employee_name",
   "department",
   "designation",
   "reviewer",
@@ -39,6 +39,15 @@
    "reqd": 1
   },
   {
+   "description": "Choose the company first to list its employees.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only_depends_on": "eval:doc.employee"
+  },
+  {
    "fieldname": "employee",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
@@ -50,22 +59,14 @@
    "search_index": 1
   },
   {
-   "fetch_from": "employee.employee_name",
-   "fieldname": "employee_name",
-   "fieldtype": "Data",
-   "label": "Employee Name",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_employee",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Company",
-   "options": "Company",
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
    "read_only": 1
   },
   {
@@ -123,7 +124,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-16 12:00:00.000000",
+ "modified": "2026-11-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "KPI Template",

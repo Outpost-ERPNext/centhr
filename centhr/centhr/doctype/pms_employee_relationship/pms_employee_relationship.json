@@ -6,9 +6,9 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "company",
   "employee",
   "employee_name",
-  "company",
   "locked",
   "column_break_org",
   "department",
@@ -24,6 +24,15 @@
   "peer_names"
  ],
  "fields": [
+  {
+   "description": "Choose the company first to list its employees.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only_depends_on": "eval:doc.employee"
+  },
   {
    "fieldname": "employee",
    "fieldtype": "Link",
@@ -42,14 +51,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Employee Name",
-   "read_only": 1
-  },
-  {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Company",
-   "options": "Company",
    "read_only": 1
   },
   {
@@ -141,7 +142,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-17 10:00:00.000000",
+ "modified": "2026-11-23 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "PMS Employee Relationship",
