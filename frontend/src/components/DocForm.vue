@@ -102,7 +102,7 @@
 import { computed, ref, watch } from "vue"
 import { Button } from "frappe-ui"
 import { needsPromptName } from "@/data/doc"
-import { getLayout, NO_VALUE_TYPES, type DocField, type LayoutSection } from "@/data/meta"
+import { getLayout, getMeta, NO_VALUE_TYPES, type DocField, type LayoutSection } from "@/data/meta"
 import { evaluateDependsOn, isReadOnly, isRequired } from "@/utils/dependsOn"
 import ChildTable from "./fields/ChildTable.vue"
 import FieldControl from "./fields/FieldControl.vue"
@@ -143,6 +143,13 @@ const emit = defineEmits<{ change: [fieldname: string, value: any] }>()
 const promptName = computed(() => needsPromptName(props.doctype, props.doc))
 const nameField = computed<DocField>(() => ({ fieldname: "__newname", fieldtype: "Data", label: props.nameLabel || "Name", reqd: 1 }))
 
+const TABLE_TYPES = ["Table", "Table MultiSelect"]
+const writableLevels = computed(() => {
+	const listed = new Set(props.writableFields || [])
+	const fields = getMeta(props.doctype)?.fields || []
+	return new Set(fields.filter((f) => listed.has(f.fieldname)).map((f) => f.permlevel || 0))
+})
+
 const tabs = computed(() => {
 	const layout = getLayout(props.doctype)
 	// Drop tabs with nothing to edit (Connections, dashboards)
@@ -174,8 +181,15 @@ function required(field: DocField) {
 function fieldReadOnly(field: DocField) {
 	if (props.readOnly || props.readOnlyFields?.includes(field.fieldname)) return true
 	if (isReadOnly(field, props.doc)) return true
-	if (props.writableFields?.length && !props.writableFields.includes(field.fieldname)) return true
+	if (props.writableFields?.length && !mayWrite(field)) return true
 	return false
+}
+
+/** Frappe lists only the fields that keep a value, so a child table is never on the list. It is
+ * writable when the user may write other fields of its permission level. */
+function mayWrite(field: DocField) {
+	if (props.writableFields!.includes(field.fieldname)) return true
+	return TABLE_TYPES.includes(field.fieldtype) && writableLevels.value.has(field.permlevel || 0)
 }
 
 function sectionVisible(section: LayoutSection) {
