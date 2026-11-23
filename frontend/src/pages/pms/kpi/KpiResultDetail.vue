@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="KPI Result"
-		list-label="KPI Dashboard"
+		list-label="KPI Results"
 		:page="page"
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="period"
