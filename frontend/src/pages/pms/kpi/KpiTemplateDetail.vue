@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="KPI Template"
-		list-label="KPI Templates"
+		list-label="KPI Template"
 		:page="page"
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="page.isNew ? '' : period"

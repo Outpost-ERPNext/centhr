@@ -179,8 +179,9 @@ const routes: RouteRecordRaw[] = [
 				name: "IOUDashboard",
 				component: () => import("@/pages/iou/IOUDashboard.vue"),
 			},
+			{ path: "pms/kpi-dashboard", name: "KpiDashboard", component: () => import("@/pages/pms/kpi/KpiDashboard.vue") },
 			// A KPI Result is made by submitting a KPI Template, so it has no "new" page
-			{ path: "pms/kpi-results", name: "KpiResultList", component: () => import("@/pages/pms/kpi/KpiDashboard.vue") },
+			{ path: "pms/kpi-results", name: "KpiResultList", component: () => import("@/pages/pms/kpi/KpiResultList.vue") },
 			{
 				path: "pms/kpi-results/:name",
 				name: "KpiResultDetail",

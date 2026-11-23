@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: '360 Setup' }]">
+	<PageHeader :crumbs="[{ label: 'Weight & 360° Assignment' }]">
 		<template #actions>
 			<Button v-if="can('PMS 360 Degree').create" variant="solid" icon-left="lucide-plus" label="New 360 review" :route="{ name: 'Pms360New' }" />
 		</template>

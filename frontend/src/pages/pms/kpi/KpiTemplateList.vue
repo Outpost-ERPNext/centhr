@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'KPI Templates' }]">
+	<PageHeader :crumbs="[{ label: 'KPI Template' }]">
 		<template #actions>
 			<template v-if="can('KPI Template').create">
 				<Button icon-left="lucide-copy" label="Copy last month" class="hidden sm:inline-flex" @click="copyOpen = true" />

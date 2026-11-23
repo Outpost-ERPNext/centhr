@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Overall Scores' }]">
+	<PageHeader :crumbs="[{ label: 'Overall Score Dashboard' }]">
 		<template #actions>
 			<Button icon-left="lucide-rotate-ccw" label="Refresh" :disabled="!ready" @click="load" />
 		</template>

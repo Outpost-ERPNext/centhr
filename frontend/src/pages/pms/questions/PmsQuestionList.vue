@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Question Bank' }]">
+	<PageHeader :crumbs="[{ label: 'PMS Question Bank' }]">
 		<template #actions>
 			<Button v-if="can('PMS Question').create" variant="solid" icon-left="lucide-plus" label="New question" :route="{ name: 'PmsQuestionNew' }" />
 		</template>

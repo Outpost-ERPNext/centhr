@@ -197,31 +197,29 @@ const groups: { label: string; items: NavItem[] }[] = [
 	},
 	{
 		label: "Performance",
+		// In the order of the PMS menu the company sites have
 		items: [
-			{ label: "KPI Dashboard", icon: "lucide-target", route: "/pms/kpi-results", doctype: "KPI Result" },
-			{ label: "KPI Templates", icon: "lucide-clipboard-list", route: "/pms/kpi-templates", doctype: "KPI Template" },
-			{ label: "My Reviews", icon: "lucide-clipboard-check", route: "/pms/reviews", doctypes: ["KPI Result", "PMS Form Allocation"] },
-			{ label: "Overall Scores", icon: "lucide-gauge", route: "/pms/overall-scores", doctype: "KPI Result" },
 			{
-				label: "360 Review",
-				icon: "lucide-orbit",
+				label: "PMS",
+				icon: "lucide-star",
 				children: [
-					{ label: "360 Setup", icon: "lucide-settings-2", route: "/pms/360-setup", doctype: "PMS 360 Degree" },
+					{ label: "KPI Template", icon: "lucide-clipboard-list", route: "/pms/kpi-templates", doctype: "KPI Template" },
+					{ label: "KPI Result", icon: "lucide-chart-column", route: "/pms/kpi-results", doctype: "KPI Result" },
+					{ label: "KPI UOM", icon: "lucide-ruler", route: "/pms/kpi-uoms", doctype: "KPI UOM" },
+					{ label: "KPI Dashboard", icon: "lucide-target", route: "/pms/kpi-dashboard", doctype: "KPI Result" },
+					{ label: "PMS Employee Relationship", icon: "lucide-users-round", route: "/pms/relationships", doctype: "PMS Employee Relationship" },
+					{ label: "PMS Question Bank", icon: "lucide-circle-help", route: "/pms/questions", doctype: "PMS Question" },
+					{ label: "Weight & 360° Assignment", icon: "lucide-scale", route: "/pms/360-setup", doctype: "PMS 360 Degree" },
 					{ label: "Create PMS Form", icon: "lucide-file-plus", route: "/pms/create-form", doctype: "PMS Questionnaire" },
 					{ label: "Form Dashboard", icon: "lucide-layout-list", route: "/pms/questionnaires", doctype: "PMS Questionnaire" },
-					{ label: "Submission Status", icon: "lucide-list-checks", route: "/pms/review-status", doctype: "PMS Form Allocation" },
+					{ label: "Form Submission Status", icon: "lucide-list-checks", route: "/pms/review-status", doctype: "PMS Form Allocation" },
+					{ label: "Overall Score Dashboard", icon: "lucide-trophy", route: "/pms/overall-scores", doctype: "KPI Result" },
+					// CentHR's own pages, which the company sites keep elsewhere
+					// Every employee who reviews reads KPI Results; allocations themselves are for HR
+					{ label: "My Reviews", icon: "lucide-clipboard-check", route: "/pms/reviews", doctype: "KPI Result" },
 					{ label: "Score Sheets", icon: "lucide-receipt-text", route: "/pms/score-sheets", doctype: "PMS Score Sheet" },
-				],
-			},
-			{ label: "Peer Mapping", icon: "lucide-users-round", route: "/pms/relationships", doctype: "PMS Employee Relationship" },
-			{
-				label: "PMS Setup",
-				icon: "lucide-sliders-horizontal",
-				children: [
 					{ label: "PMS Settings", icon: "lucide-settings", route: "/pms/settings", doctype: "PMS Settings" },
-					{ label: "Question Bank", icon: "lucide-list-checks", route: "/pms/questions", doctype: "PMS Question" },
 					{ label: "Question Traits", icon: "lucide-tags", route: "/pms/question-traits", doctype: "PMS Question Trait" },
-					{ label: "KPI UOM", icon: "lucide-ruler", route: "/pms/kpi-uoms", doctype: "KPI UOM" },
 				],
 			},
 		],

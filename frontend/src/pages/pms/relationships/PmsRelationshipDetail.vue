@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="PMS Employee Relationship"
-		list-label="Peer Mapping"
+		list-label="PMS Employee Relationship"
 		:page="page"
 		:title="page.doc.value.employee_name || page.doc.value.name"
 		:subtitle="page.isNew ? '' : [page.doc.value.department, page.doc.value.grade].filter(Boolean).join(' · ')"

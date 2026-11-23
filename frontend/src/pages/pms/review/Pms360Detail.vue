@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="PMS 360 Degree"
-		list-label="360 Setup"
+		list-label="Weight & 360° Assignment"
 		:page="page"
 		:title="page.isNew ? '' : `${page.doc.value.quarter} ${page.doc.value.fiscal_year}`"
 		:subtitle="page.doc.value.company"

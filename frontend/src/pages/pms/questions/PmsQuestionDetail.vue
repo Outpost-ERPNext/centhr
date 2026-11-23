@@ -1,7 +1,7 @@
 <template>
 	<DocPageShell
 		doctype="PMS Question"
-		list-label="Question Bank"
+		list-label="PMS Question Bank"
 		:page="page"
 		:title="page.doc.value.question || page.doc.value.name"
 		:hidden-fields="['naming_series']"

@@ -1,5 +1,5 @@
 <template>
-	<PageHeader :crumbs="[{ label: 'Peer Mapping' }]">
+	<PageHeader :crumbs="[{ label: 'PMS Employee Relationship' }]">
 		<template #actions>
 			<template v-if="can('PMS Employee Relationship').write">
 				<Button icon-left="lucide-refresh-cw" label="Run peer mapping" @click="runOpen = true" />
