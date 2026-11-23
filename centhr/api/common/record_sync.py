@@ -319,10 +319,11 @@ def sync_lock(doctype: str, name: str):
 	)
 
 
-def run_for_targets(ref, company: str | None, action) -> None:
+def run_for_targets(ref, company: str | None, action, targets: list | None = None) -> None:
+	"""Runs `action` for each target of the company, or for the given ones."""
 	failed_targets = []
 
-	for target in get_targets(company):
+	for target in get_targets(company) if targets is None else targets:
 		try:
 			action(target)
 		except CentHRSyncError:

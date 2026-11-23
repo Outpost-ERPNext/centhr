@@ -319,6 +319,7 @@ doc_events = {
 		"on_update_after_submit": "centhr.api.update.payroll_entry.enqueue_payroll_entry_update",
 		"on_trash": "centhr.api.delete.payroll_entry.enqueue_payroll_entry_delete",
 	},
+	# The PMS DocTypes are added below, see PMS_SYNC_EVENTS
 	# A payment request is Paid once the bank entry made for it is submitted
 	"Journal Entry": {
 		"on_submit": "centhr.centhr.doctype.payment_request_form.payment_request_form.follow_bank_entry",
@@ -326,6 +327,34 @@ doc_events = {
 		"on_trash": "centhr.centhr.doctype.payment_request_form.payment_request_form.follow_bank_entry",
 	},
 }
+
+# PMS records are copied to the company sites that take them (CentHr Settings > Send PMS Records)
+PMS_SYNC_EVENTS = {
+	"after_insert": "centhr.api.post.pms.enqueue_pms_sync",
+	"on_update": "centhr.api.update.pms.enqueue_pms_update",
+	"on_cancel": "centhr.api.update.pms.enqueue_pms_update",
+	"on_update_after_submit": "centhr.api.update.pms.enqueue_pms_update",
+	"on_trash": "centhr.api.delete.pms.enqueue_pms_delete",
+}
+doc_events.update(
+	{
+		doctype: PMS_SYNC_EVENTS
+		for doctype in (
+			"KPI UOM",
+			"PMS Question Trait",
+			"PMS Question",
+			"PMS Settings",
+			"PMS Employee Relationship",
+			"KPI Template",
+			"KPI Result",
+			"PMS 360 Degree",
+			"PMS Questionnaire",
+			"PMS Form Allocation",
+			"PMS Question Form",
+			"PMS Score Sheet",
+		)
+	}
+)
 
 # Scheduled Tasks
 # ---------------

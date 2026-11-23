@@ -10,7 +10,8 @@
   "base_url",
   "company",
   "api_key",
-  "api_secret"
+  "api_secret",
+  "sync_pms"
  ],
  "fields": [
   {
@@ -41,13 +42,21 @@
    "in_list_view": 1,
    "label": "API Secret",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Copy every PMS record made on this site to the company's site. Saving a record there sends that site's own emails.",
+   "fieldname": "sync_pms",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Send PMS Records"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-06 19:13:24.588780",
+ "modified": "2026-11-23 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "centhr",
  "name": "CentHR Settings Table",
