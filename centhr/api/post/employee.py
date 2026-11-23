@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Outpost Work LLP and contributors
 # For license information, please see license.txt
 
+import html
 import json
 import re
 
@@ -198,12 +199,31 @@ def get_target_message(response) -> str:
 	try:
 		body = response.json()
 	except ValueError:
-		title = re.search(r"<title>(.*?)</title>", response.text, re.DOTALL)
-		return title.group(1).strip() if title else response.text[:500]
+		return get_html_error(response.text)
 
 	if not isinstance(body, dict):
 		return ""
 	return body.get("exception") or body.get("exc_type") or ""
+
+
+def get_html_error(text: str) -> str:
+	"""The error of a debugger page: its title and every frame of the traceback. The page itself is cut
+	short in the log, and the frames it loses are the last ones, which say where the target failed."""
+	title = re.search(r"<title>(.*?)</title>", text, re.DOTALL)
+	frames = re.findall(
+		r'<cite class="filename">"(.*?)"</cite>,\s*line <em class="line">(\d+)</em>,\s*'
+		r'in <code class="function">(.*?)</code>.*?<pre class="line current">(.*?)</pre>',
+		text,
+		re.DOTALL,
+	)
+	if not title and not frames:
+		return text[:500]
+
+	lines = [" ".join(title.group(1).split()) if title else ""]
+	for filename, lineno, function, code in frames:
+		code = html.unescape(re.sub(r"<[^>]+>", "", code)).strip()
+		lines.append(f"{filename}:{lineno} in {function}: {code}")
+	return "\n".join(lines)
 
 
 def insert_log(doc, target, status: str, error: str | None = None, **fields) -> None:
