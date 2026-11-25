@@ -33,15 +33,21 @@ def send_otp(employee: str) -> str:
 	otp = f"{secrets.randbelow(10**OTP_DIGITS):0{OTP_DIGITS}d}"
 	set_otp(employee, {"hash": hash_otp(employee, otp), "attempts": 0, "expires_at": time.time() + OTP_TTL})
 
-	frappe.sendmail(
-		recipients=[email],
-		subject=_("Your verification code"),
-		message=_(
-			"Your verification code is <b>{0}</b>. It expires in {1} minutes.<br><br>"
-			"If you did not request this code, ignore this email."
-		).format(otp, OTP_TTL // 60),
-		now=True,
-	)
+	try:
+		frappe.sendmail(
+			recipients=[email],
+			subject=_("Your verification code"),
+			message=_(
+				"Your verification code is <b>{0}</b>. It expires in {1} minutes.<br><br>"
+				"If you did not request this code, ignore this email."
+			).format(otp, OTP_TTL // 60),
+			now=True,
+		)
+	except Exception:
+		# Deferred, so the throw below does not roll the log back
+		frappe.log_error(title=f"Web form OTP email failed for {employee}", defer_insert=True)
+		frappe.cache.delete_value(otp_key(employee))
+		frappe.throw(_("Could not send the verification code. Contact HR."), title=_("Cannot Send Code"))
 	return mask_email(email)
 
 
